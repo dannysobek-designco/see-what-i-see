@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>See What I See — Visual Snow Syndrome Simulator</title>
+<meta name="description" content="An interactive simulator of Visual Snow Syndrome (VSS). Adjust visual snow, afterimages, floaters, halos and more — over sample scenes, your own photos, or your live camera.">
+<meta property="og:title" content="See What I See — Visual Snow Syndrome Simulator">
+<meta property="og:description" content="Experience an approximation of Visual Snow Syndrome. Tune the symptoms, then look through my eyes.">
+<meta property="og:type" content="website">
+<!-- og:image / og:url must be ABSOLUTE URLs for social scrapers.
+     Swap these placeholders for your real domain before/after deploy. -->
+<meta property="og:url" content="https://REPLACE-WITH-YOUR-DOMAIN/">
+<meta property="og:image" content="https://REPLACE-WITH-YOUR-DOMAIN/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A night street rendered with the visual static, glare and afterimages of Visual Snow Syndrome.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="See What I See — Visual Snow Syndrome Simulator">
+<meta name="twitter:description" content="Experience an approximation of Visual Snow Syndrome. Tune the symptoms, then look through my eyes.">
+<meta name="twitter:image" content="https://REPLACE-WITH-YOUR-DOMAIN/assets/og.jpg">
+<meta name="theme-color" content="#2f6bff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2320c9a7'/%3E%3Cstop offset='1' stop-color='%231295cd'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='32' fill='url(%23g)'/%3E%3Cpath d='M10 32s7.7-13 22-13 22 13 22 13-7.7 13-22 13-22-13-22-13z' fill='none' stroke='%23fff' stroke-width='4.5' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='32' r='7' fill='none' stroke='%23fff' stroke-width='4.5'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<main id="stage">
+  <canvas id="glcanvas"></canvas>
+
+  <!-- floating top-left identity -->
+  <header id="brand">
+    <div id="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/>
+        <circle cx="12" cy="12" r="3.2"/>
+      </svg>
+    </div>
+    <div>
+      <h1>See&nbsp;What&nbsp;I&nbsp;See</h1>
+      <p>a Visual Snow Syndrome simulator</p>
+    </div>
+  </header>
+
+  <!-- floating actions on the canvas -->
+  <div id="stage-actions">
+    <button id="btn-compare" class="stage-btn" title="Press and hold to see the scene without symptoms">
+      <span class="dot"></span> Hold&nbsp;to&nbsp;compare
+    </button>
+    <button id="btn-split" class="stage-btn" title="Split the view: typical vision beside VSS">Split&nbsp;view</button>
+    <button id="btn-vr" class="stage-btn" title="Side-by-side view for a phone VR headset">VR&nbsp;view</button>
+    <button id="btn-panel" class="stage-btn only-mobile" title="Show controls">Controls</button>
+  </div>
+
+  <!-- split-compare divider -->
+  <div id="split-ui" hidden>
+    <div id="split-divider"><span id="split-handle">◂ ▸</span></div>
+    <span class="split-label" id="split-label-l">Typical vision</span>
+    <span class="split-label" id="split-label-r">With VSS</span>
+  </div>
+
+  <div id="vr-hint" hidden>Tap anywhere to exit VR view</div>
+  <div id="toast" hidden></div>
+</main>
+
+<aside id="panel">
+  <div id="panel-grip" aria-hidden="true"><span></span></div>
+
+  <section class="panel-block" id="source-block">
+    <h2 class="block-title">Looking at</h2>
+    <div class="chip-row" id="scene-chips">
+      <button class="chip" data-scene="sky">Daytime</button>
+      <button class="chip active" data-scene="night">Night street</button>
+      <button class="chip" data-scene="page">Reading</button>
+      <button class="chip" data-scene="eyes">Eyes closed</button>
+      <button class="chip" data-scene="upload">Your photo</button>
+      <button class="chip chip-cam" data-scene="camera">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Live camera
+      </button>
+    </div>
+    <input type="file" id="file-input" accept="image/*" hidden>
+  </section>
+
+  <section class="panel-block">
+    <h2 class="block-title">Severity presets</h2>
+    <div class="chip-row">
+      <button class="chip preset" data-preset="none">Clear vision</button>
+      <button class="chip preset" data-preset="mild">Mild</button>
+      <button class="chip preset" data-preset="moderate">Moderate</button>
+      <button class="chip preset" data-preset="severe">Severe</button>
+      <button class="chip preset" id="chip-mine" data-preset="mine" hidden>My VSS</button>
+    </div>
+  </section>
+
+  <section class="panel-block" id="sliders"><!-- built by app.js --></section>
+
+  <section class="panel-block" id="share-block">
+    <button id="btn-share" class="wide-btn">Copy a link to <em>my</em> settings</button>
+    <p class="fine">Tune the sliders to match your experience, then share the link — whoever opens it sees exactly what you set.</p>
+  </section>
+
+  <footer id="panel-footer">
+    <button id="btn-about" class="link-btn">About VSS &amp; this simulator</button>
+    <a href="https://www.visualsnowinitiative.org" target="_blank" rel="noopener">visualsnowinitiative.org ↗</a>
+  </footer>
+</aside>
+
+<!-- first-visit intro -->
+<dialog id="intro">
+  <article>
+    <div class="intro-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/>
+        <circle cx="12" cy="12" r="3.2"/>
+      </svg>
+    </div>
+    <h2>See What I See</h2>
+    <ol class="intro-steps">
+      <li><strong>This is Visual Snow Syndrome.</strong> A constant layer of static, afterimages, floaters and glare that never switches off — even with eyes closed.</li>
+      <li><strong>Hold the “Hold to compare” button</strong> (or turn on Split view) to see the same scene through typical eyes.</li>
+      <li><strong>Have VSS yourself?</strong> Set the sliders to match your experience, then copy a link — whoever opens it sees exactly what you see.</li>
+    </ol>
+    <p class="fine">Heads up: this simulation uses flicker and occasional light flashes. If you're sensitive to flashing light, please take care. It's an educational approximation, not a medical tool.</p>
+    <form method="dialog"><button class="wide-btn">Explore</button></form>
+  </article>
+</dialog>
+
+<!-- About dialog -->
+<dialog id="about">
+  <article>
+    <h2>Visual Snow Syndrome</h2>
+    <p>VSS is a neurological condition affecting an estimated 2–3% of people. Its hallmark is <strong>visual snow</strong>: dynamic, continuous tiny dots across the entire visual field — like watching the world through television static or a shaken snow globe, 24/7, with eyes open or closed.</p>
+    <p>Per the published diagnostic criteria, a diagnosis also requires at least two of these four symptom categories, all of which this simulator can render:</p>
+    <ul>
+      <li><strong>Palinopsia</strong> — afterimages and trailing that linger after the object is gone.</li>
+      <li><strong>Enhanced entoptic phenomena</strong> — excessive floaters, swarms of darting dots (blue-field phenomenon), and spontaneous flashes of light (photopsia).</li>
+      <li><strong>Photophobia</strong> — sensitivity or intolerance to light.</li>
+      <li><strong>Nyctalopia</strong> — impaired night vision.</li>
+    </ul>
+    <p>Many people also experience halos and starbursts around lights, double vision, and pulsating or trembling vision — plus non-visual symptoms like tinnitus, brain fog, and sensory overload that no screen can show.</p>
+    <p class="fine">This simulator is an approximation for empathy and education — everyone's VSS is different, and it is not a diagnostic or medical tool. Learn more at the <a href="https://www.visualsnowinitiative.org" target="_blank" rel="noopener">Visual Snow Initiative</a>.</p>
+    <p class="fine">Demo photos by <a href="https://unsplash.com/@soham1991" target="_blank" rel="noopener">Soham Banerjee</a>, <a href="https://unsplash.com/@handco" target="_blank" rel="noopener">H&amp;CO</a>, and <a href="https://unsplash.com/@brett_jordan" target="_blank" rel="noopener">Brett Jordan</a> on <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a>.</p>
+    <form method="dialog"><button class="wide-btn">Close</button></form>
+  </article>
+</dialog>
+
+<video id="camvideo" playsinline muted hidden></video>
+
+<script src="js/scenes.js"></script>
+<script src="js/gl.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
