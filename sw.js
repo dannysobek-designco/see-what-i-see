@@ -1,8 +1,15 @@
 /* Service worker: makes the deployed app installable and usable offline.
-   Strategy: network-first for navigations (so deploys show up immediately),
-   cache-first for everything else (images, JS, CSS, fonts). */
 
-const CACHE = "sws-v1";
+   Strategy:
+   - Code & documents (HTML, JS, CSS, manifest) → NETWORK-FIRST, so a fresh
+     deploy always wins and the app can never get stuck on stale scripts.
+     Falls back to cache only when offline.
+   - Everything else (images, fonts) → CACHE-FIRST for speed; these are
+     stable and change rarely (bump CACHE when they do).
+
+   Bump CACHE on any release that changes precached assets. */
+
+const CACHE = "sws-v2";
 const PRECACHE = [
   ".",
   "index.html",
@@ -34,12 +41,17 @@ self.addEventListener("activate", e => {
   );
 });
 
+const isCodeAsset = url =>
+  url.origin === location.origin &&
+  /\.(?:html|js|css|webmanifest)$/.test(url.pathname);
+
 self.addEventListener("fetch", e => {
   const req = e.request;
   if(req.method !== "GET") return;
+  const url = new URL(req.url);
 
-  if(req.mode === "navigate"){
-    // network-first so a fresh deploy is picked up on next load
+  // network-first for navigations and code assets
+  if(req.mode === "navigate" || isCodeAsset(url)){
     e.respondWith(
       fetch(req)
         .then(res => {
@@ -52,7 +64,7 @@ self.addEventListener("fetch", e => {
     return;
   }
 
-  // cache-first for static assets (incl. cross-origin fonts)
+  // cache-first for static assets (images, cross-origin fonts)
   e.respondWith(
     caches.match(req).then(hit => hit || fetch(req).then(res => {
       if(res.ok || res.type === "opaque"){

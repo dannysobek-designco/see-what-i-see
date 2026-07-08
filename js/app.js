@@ -619,6 +619,14 @@ if("serviceWorker" in navigator &&
    !["localhost", "127.0.0.1"].includes(location.hostname) &&
    location.protocol === "https:"){
   addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  // when a new worker takes over (a fresh deploy), reload once so the page
+  // is running the new code rather than whatever loaded from the old cache
+  let reloadedForUpdate = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if(reloadedForUpdate) return;
+    reloadedForUpdate = true;
+    location.reload();
+  });
 }
 
 useScene("night");
