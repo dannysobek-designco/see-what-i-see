@@ -36,7 +36,10 @@ Extras:
   optional guided walkthrough (replayable anytime from the footer) that
   spotlights each part of the UI — on every screen size
 - A prominent "Adjust the vision" control on mobile so it's clear the panel
-  is the first thing to open
+  is the first thing to open, plus a mobile-only "Live camera" entry that
+  expands (Normal / VR) into empty space without shifting the row
+- On a first mobile visit, once onboarding wraps up, a quick chooser asks
+  whether to start the live camera or explore a sample scene
 - PWA: installable to the home screen, works offline after first load,
   adaptive render resolution for slower phones
 

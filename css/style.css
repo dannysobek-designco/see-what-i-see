@@ -412,7 +412,7 @@ body {
 
 /* ————— dialogs (about + intro) ————— */
 
-#about, #intro {
+#about, #intro, #source-pick {
   border: none;
   border-radius: 20px;
   background: var(--card);
@@ -423,15 +423,25 @@ body {
   margin: auto;
   box-shadow: var(--shadow-pop);
 }
-#about::backdrop, #intro::backdrop { background: rgba(14, 27, 51, .4); backdrop-filter: blur(4px); }
-#about article, #intro article { padding: 28px; overflow-y: auto; max-height: 85dvh; }
-#about h2, #intro h2 {
+#about::backdrop, #intro::backdrop, #source-pick::backdrop { background: rgba(14, 27, 51, .4); backdrop-filter: blur(4px); }
+#about article, #intro article, #source-pick article { padding: 28px; overflow-y: auto; max-height: 85dvh; }
+#about h2, #intro h2, #source-pick h2 {
   font-family: "Sora", sans-serif; font-weight: 600;
   letter-spacing: -0.02em;
   font-size: 1.35rem; margin-bottom: 14px;
 }
-#about p, #about ul, #intro p { font-size: .9rem; line-height: 1.65; color: var(--text-dim); margin-bottom: 12px; }
+#about p, #about ul, #intro p, #source-pick p { font-size: .9rem; line-height: 1.65; color: var(--text-dim); margin-bottom: 12px; }
 #about strong, #intro strong { color: var(--text); }
+
+/* first-visit source chooser */
+#source-pick { max-width: 460px; }
+.pick-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+#pick-cam {
+  background: var(--grad-blue); color: #fff;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  box-shadow: 0 6px 18px rgba(34, 88, 232, .3);
+}
+#pick-scene { text-align: center; }
 #about ul { padding-left: 20px; }
 #about li { margin-bottom: 6px; }
 #about a { color: var(--accent-strong); }

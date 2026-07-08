@@ -58,7 +58,7 @@ const state = { ...PRESETS.moderate };
 
 /* ————— local persistence ————— */
 
-const LS_MY = "sws.my", LS_INTRO = "sws.intro", LS_TOUR = "sws.tour";
+const LS_MY = "sws.my", LS_INTRO = "sws.intro", LS_TOUR = "sws.tour", LS_SOURCE = "sws.source";
 
 function saveMine(){
   try { localStorage.setItem(LS_MY, JSON.stringify(state)); } catch {}
@@ -577,7 +577,22 @@ function endTour(){
   removeEventListener("resize", positionTour);
   if(isMobile()) document.body.classList.remove("panel-open");
   try { localStorage.setItem(LS_TOUR, "1"); } catch {}
+  maybeShowSourceChooser();
 }
+
+// on a first mobile visit, once onboarding wraps up, ask how they want to
+// see it: over their live camera, or with a sample scene
+const sourcePick = document.getElementById("source-pick");
+function maybeShowSourceChooser(){
+  if(!isMobile() || localStorage.getItem(LS_SOURCE)) return;
+  try { localStorage.setItem(LS_SOURCE, "1"); } catch {}
+  setTimeout(() => sourcePick.showModal(), 250);   // after any overlay closes
+}
+document.getElementById("pick-cam").addEventListener("click", () => {
+  sourcePick.close();
+  selectCamera(false);
+});
+document.getElementById("pick-scene").addEventListener("click", () => sourcePick.close());
 
 function showTourStep(){
   const step = TOUR_STEPS[tour.i];
@@ -673,6 +688,7 @@ document.getElementById("intro-skip").addEventListener("click", () => {
   markSeen();
   try { localStorage.setItem(LS_TOUR, "1"); } catch {}
   intro.close();
+  maybeShowSourceChooser();   // still offer the source choice on first visit
 });
 intro.addEventListener("close", markSeen);   // Escape / backdrop
 
