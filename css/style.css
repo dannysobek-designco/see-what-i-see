@@ -524,8 +524,12 @@ body.vr { grid-template-columns: 1fr; }
   #brand { top: 14px; left: 16px; }
   #brand h1 { font-size: 1.02rem; }
 
-  /* utility actions become secondary, tucked above the primary CTA */
-  #stage-actions { left: 16px; right: 16px; bottom: calc(64px + env(safe-area-inset-bottom)); }
+  /* utility actions become secondary, tucked above the primary CTA with a
+     clear gap (CTA bottom offset + its ~50px height + breathing room) */
+  #stage-actions {
+    left: 16px; right: 16px;
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 68px);
+  }
   #stage-actions .stage-btn { font-size: .78rem; padding: 8px 12px; }
 
   /* the primary way in: a prominent, full-width control opener */
