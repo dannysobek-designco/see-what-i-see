@@ -58,7 +58,7 @@ const state = { ...PRESETS.moderate };
 
 /* ————— local persistence ————— */
 
-const LS_MY = "sws.my", LS_INTRO = "sws.intro";
+const LS_MY = "sws.my", LS_INTRO = "sws.intro", LS_TOUR = "sws.tour";
 
 function saveMine(){
   try { localStorage.setItem(LS_MY, JSON.stringify(state)); } catch {}
@@ -404,9 +404,10 @@ function loadFromHash(){
 
 /* ————— panel (mobile bottom sheet), about, toast ————— */
 
-document.getElementById("btn-panel").addEventListener("click", () => {
-  document.body.classList.toggle("panel-open");
-});
+function openPanel(){
+  document.body.classList.add("panel-open", "controls-used");
+}
+document.getElementById("btn-panel").addEventListener("click", openPanel);
 document.getElementById("panel-grip").addEventListener("click", () => {
   document.body.classList.toggle("panel-open");
 });
@@ -484,15 +485,133 @@ if(loadFromHash()){
   }
 }
 
-// first visit: explain what this is (and warn about flicker) once
+/* ————— guided walkthrough (coach marks) ————— */
+
+const TOUR_STEPS = [
+  { sel: "#source-block", panel: true,  title: "Pick what you're looking at",
+    body: "Start here. Choose a sample scene, upload your own photo, or use your live camera to see the effect over the real world." },
+  { sel: "#preset-block", panel: true,  title: "Set the overall severity",
+    body: "Jump to Mild, Moderate or Severe — or if you have VSS, build up your own from here. Your custom mix is saved as “My VSS.”" },
+  { sel: "#sliders",      panel: true,  title: "Fine-tune each symptom",
+    body: "Every symptom has its own control — visual snow, afterimages, glare, floaters and more. Adjust any of them to match what you experience." },
+  { sel: "#btn-compare",  panel: false, title: "Compare with typical vision",
+    body: "Press and hold this any time to drop the symptoms away, so others can see the difference. “Split view” shows both at once." },
+  { sel: "#share-block",  panel: true,  title: "Share exactly what you see",
+    body: "Once it looks right, copy a link — whoever opens it sees your precise settings. The best way to say “this is what my eyes do.”" },
+];
+
+const tour = {
+  el: document.getElementById("tour"),
+  hole: document.getElementById("tour-hole"),
+  pop: document.getElementById("tour-pop"),
+  i: 0, active: false,
+};
+const isMobile = () => matchMedia("(max-width: 860px)").matches;
+
+function startTour(){
+  if(tour.active) return;
+  tour.active = true;
+  tour.i = 0;
+  setSplit(false);
+  tour.el.hidden = false;
+  addEventListener("resize", positionTour);
+  showTourStep();
+}
+
+function endTour(){
+  tour.active = false;
+  tour.el.hidden = true;
+  removeEventListener("resize", positionTour);
+  if(isMobile()) document.body.classList.remove("panel-open");
+  try { localStorage.setItem(LS_TOUR, "1"); } catch {}
+}
+
+function showTourStep(){
+  const step = TOUR_STEPS[tour.i];
+  document.getElementById("tour-step").textContent = `Step ${tour.i + 1} of ${TOUR_STEPS.length}`;
+  document.getElementById("tour-title").textContent = step.title;
+  document.getElementById("tour-body").textContent = step.body;
+  document.getElementById("tour-back").style.visibility = tour.i === 0 ? "hidden" : "visible";
+  document.getElementById("tour-next").textContent =
+    tour.i === TOUR_STEPS.length - 1 ? "Done" : "Next";
+
+  // on mobile, panel-internal steps need the sheet open (and scrolled to);
+  // stage steps need it closed. Wait for the sheet transition before measuring.
+  let delay = 0;
+  if(isMobile()){
+    const wantOpen = step.panel;
+    const isOpen = document.body.classList.contains("panel-open");
+    document.body.classList.add("controls-used");
+    if(wantOpen !== isOpen){
+      document.body.classList.toggle("panel-open", wantOpen);
+      delay = 360;
+    }
+  }
+  setTimeout(() => {
+    const el = document.querySelector(step.sel);
+    if(el && step.panel && isMobile()) el.scrollIntoView({ block: "center" });
+    setTimeout(positionTour, el && step.panel && isMobile() ? 60 : 0);
+  }, delay);
+}
+
+function positionTour(){
+  const step = TOUR_STEPS[tour.i];
+  const el = document.querySelector(step.sel);
+  if(!el) return;
+  const r = el.getBoundingClientRect();
+  const pad = 8;
+  const H = tour.hole;
+  H.style.top = (r.top - pad) + "px";
+  H.style.left = (r.left - pad) + "px";
+  H.style.width = (r.width + pad * 2) + "px";
+  H.style.height = (r.height + pad * 2) + "px";
+
+  const pop = tour.pop;
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  const vw = innerWidth, vh = innerHeight, gap = 14, m = 12;
+  const below = vh - r.bottom, above = r.top;
+  let top;
+  if(below >= ph + gap || below >= above) top = Math.min(r.bottom + gap, vh - ph - m);
+  else top = Math.max(r.top - ph - gap, m);
+  let left = r.left + r.width / 2 - pw / 2;
+  left = Math.max(m, Math.min(left, vw - pw - m));
+  pop.style.top = top + "px";
+  pop.style.left = left + "px";
+}
+
+document.getElementById("tour-next").addEventListener("click", () => {
+  if(tour.i >= TOUR_STEPS.length - 1) endTour();
+  else { tour.i++; showTourStep(); }
+});
+document.getElementById("tour-back").addEventListener("click", () => {
+  if(tour.i > 0){ tour.i--; showTourStep(); }
+});
+document.getElementById("tour-skip").addEventListener("click", endTour);
+document.getElementById("btn-tour").addEventListener("click", () => {
+  if(isMobile()) document.body.classList.remove("panel-open");
+  startTour();
+});
+
+/* ————— first visit: intro, then optionally the tour ————— */
+
 const intro = document.getElementById("intro");
-const markIntroSeen = () => { try { localStorage.setItem(LS_INTRO, "1"); } catch {} };
+const markSeen = () => {
+  try { localStorage.setItem(LS_INTRO, "1"); } catch {}
+};
 if(!localStorage.getItem(LS_INTRO)){
   intro.showModal();
 }
-// cover every dismissal path: button, Escape key, backdrop
-intro.querySelector(".wide-btn").addEventListener("click", markIntroSeen);
-intro.addEventListener("close", markIntroSeen);
+document.getElementById("intro-tour").addEventListener("click", () => {
+  markSeen();
+  intro.close();
+  setTimeout(startTour, 250);   // let the dialog finish closing first
+});
+document.getElementById("intro-skip").addEventListener("click", () => {
+  markSeen();
+  try { localStorage.setItem(LS_TOUR, "1"); } catch {}
+  intro.close();
+});
+intro.addEventListener("close", markSeen);   // Escape / backdrop
 
 // offline/PWA support on the deployed site; skipped in local dev so
 // the service worker never serves stale files while iterating

@@ -32,7 +32,11 @@ Extras:
 - **Shareable links** — copy a URL that reproduces your exact settings
 - Opt-in **tinnitus** audio (a thin high-pitched tone), since most people
   with VSS also live with ringing ears
-- A first-visit intro with a photosensitivity heads-up
+- A first-visit intro with a photosensitivity heads-up, followed by an
+  optional guided walkthrough (replayable anytime from the footer) that
+  spotlights each part of the UI — on every screen size
+- A prominent "Adjust the vision" control on mobile so it's clear the panel
+  is the first thing to open
 - PWA: installable to the home screen, works offline after first load,
   adaptive render resolution for slower phones
 

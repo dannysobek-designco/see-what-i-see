@@ -54,8 +54,17 @@
     </button>
     <button id="btn-split" class="stage-btn" title="Split the view: typical vision beside VSS">Split&nbsp;view</button>
     <button id="btn-vr" class="stage-btn" title="Side-by-side view for a phone VR headset">VR&nbsp;view</button>
-    <button id="btn-panel" class="stage-btn only-mobile" title="Show controls">Controls</button>
   </div>
+
+  <!-- prominent mobile entry point into the controls -->
+  <button id="btn-panel" class="only-mobile" title="Open the controls">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/>
+      <circle cx="10" cy="9" r="2.6" fill="var(--card)"/><circle cx="15" cy="15" r="2.6" fill="var(--card)"/>
+    </svg>
+    <span>Adjust the vision</span>
+    <svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg>
+  </button>
 
   <!-- split-compare divider -->
   <div id="split-ui" hidden>
@@ -87,7 +96,7 @@
     <input type="file" id="file-input" accept="image/*" hidden>
   </section>
 
-  <section class="panel-block">
+  <section class="panel-block" id="preset-block">
     <h2 class="block-title">Severity presets</h2>
     <div class="chip-row">
       <button class="chip preset" data-preset="none">Clear vision</button>
@@ -106,6 +115,7 @@
   </section>
 
   <footer id="panel-footer">
+    <button id="btn-tour" class="link-btn">↻ Take a quick tour</button>
     <button id="btn-about" class="link-btn">About VSS &amp; this simulator</button>
     <a href="https://www.visualsnowinitiative.org" target="_blank" rel="noopener">visualsnowinitiative.org ↗</a>
   </footer>
@@ -127,9 +137,29 @@
       <li><strong>Have VSS yourself?</strong> Set the sliders to match your experience, then copy a link — whoever opens it sees exactly what you see.</li>
     </ol>
     <p class="fine">Heads up: this simulation uses flicker and occasional light flashes. If you're sensitive to flashing light, please take care. It's an educational approximation, not a medical tool.</p>
-    <form method="dialog"><button class="wide-btn">Explore</button></form>
+    <div class="intro-actions">
+      <button id="intro-tour" class="wide-btn">Show me around</button>
+      <button id="intro-skip" class="link-btn">Skip for now</button>
+    </div>
   </article>
 </dialog>
+
+<!-- guided walkthrough -->
+<div id="tour" hidden>
+  <div id="tour-hole"></div>
+  <div id="tour-pop" role="dialog" aria-live="polite">
+    <span id="tour-step"></span>
+    <h3 id="tour-title"></h3>
+    <p id="tour-body"></p>
+    <div id="tour-nav">
+      <button id="tour-skip" class="tour-link">Skip tour</button>
+      <div class="tour-nav-right">
+        <button id="tour-back" class="tour-btn ghost">Back</button>
+        <button id="tour-next" class="tour-btn">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- About dialog -->
 <dialog id="about">

@@ -441,7 +441,76 @@ body {
 
 /* ————— VR mode ————— */
 
-body.vr #panel, body.vr #brand, body.vr #stage-actions { display: none; }
+body.vr #panel, body.vr #brand, body.vr #stage-actions, body.vr #btn-panel { display: none; }
+
+/* ————— mobile controls CTA (base reset; positioned in media query) ————— */
+
+#btn-panel {
+  appearance: none; font: inherit; cursor: pointer;
+  display: none; align-items: center;
+  -webkit-user-select: none; user-select: none;
+}
+
+@keyframes cta-pulse {
+  0%, 100% { box-shadow: 0 8px 26px rgba(34, 88, 232, .42); }
+  50%      { box-shadow: 0 8px 30px rgba(34, 88, 232, .42), 0 0 0 8px rgba(47, 107, 255, .18); }
+}
+
+.intro-actions { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.intro-actions .link-btn { text-align: center; }
+
+/* ————— guided walkthrough (coach marks) ————— */
+
+#tour { position: fixed; inset: 0; z-index: 90; }
+
+#tour-hole {
+  position: absolute;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(10, 18, 34, .66);
+  transition: top .28s cubic-bezier(.3,.8,.3,1), left .28s cubic-bezier(.3,.8,.3,1),
+              width .28s cubic-bezier(.3,.8,.3,1), height .28s cubic-bezier(.3,.8,.3,1);
+  pointer-events: none;
+}
+
+#tour-pop {
+  position: absolute;
+  width: min(320px, calc(100vw - 32px));
+  background: var(--card);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow-pop);
+  transition: top .28s cubic-bezier(.3,.8,.3,1), left .28s cubic-bezier(.3,.8,.3,1);
+}
+#tour-step {
+  font-family: "Sora", sans-serif; font-size: .68rem; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+}
+#tour-title {
+  font-family: "Sora", sans-serif; font-weight: 600; font-size: 1.05rem;
+  letter-spacing: -0.01em; color: var(--text);
+  margin: 5px 0 6px;
+}
+#tour-body { font-size: .88rem; line-height: 1.55; color: var(--text-dim); }
+#tour-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 16px; gap: 10px;
+}
+.tour-nav-right { display: flex; gap: 8px; }
+.tour-btn {
+  appearance: none; font: inherit; font-size: .84rem; font-weight: 600;
+  border: none; border-radius: 9px; padding: 8px 15px; cursor: pointer;
+  background: var(--accent); color: #fff;
+  transition: background .15s, transform .1s;
+}
+.tour-btn:hover { background: var(--accent-strong); }
+.tour-btn:active { transform: scale(.97); }
+.tour-btn.ghost { background: var(--chip-bg); color: var(--text-dim); }
+.tour-btn.ghost:hover { background: var(--chip-hover); color: var(--text); }
+.tour-link {
+  appearance: none; background: none; border: none; font: inherit;
+  font-size: .82rem; color: var(--text-faint); cursor: pointer; padding: 4px 0;
+}
+.tour-link:hover { color: var(--text-dim); }
 body.vr { grid-template-columns: 1fr; }
 
 /* ————— mobile: bottom sheet ————— */
@@ -453,7 +522,32 @@ body.vr { grid-template-columns: 1fr; }
 
   #brand { top: 14px; left: 16px; }
   #brand h1 { font-size: 1.02rem; }
-  #stage-actions { left: 16px; bottom: 14px; }
+
+  /* utility actions become secondary, tucked above the primary CTA */
+  #stage-actions { left: 16px; right: 16px; bottom: calc(64px + env(safe-area-inset-bottom)); }
+  #stage-actions .stage-btn { font-size: .78rem; padding: 8px 12px; }
+
+  /* the primary way in: a prominent, full-width control opener */
+  #btn-panel {
+    display: flex;               /* ID selector, to beat the base reset */
+    position: fixed;
+    left: 16px; right: 16px;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    justify-content: center;
+    gap: 9px;
+    background: var(--grad-blue);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 15px 18px;
+    font-size: .96rem; font-weight: 600;
+    box-shadow: 0 8px 26px rgba(34, 88, 232, .42);
+    z-index: 26;
+  }
+  #btn-panel .chev { margin-left: 2px; opacity: .9; }
+  /* draw attention until the panel has been opened at least once */
+  body:not(.controls-used) #btn-panel { animation: cta-pulse 2.1s ease-in-out infinite; }
+  body.panel-open #btn-panel { display: none; }
 
   #panel {
     position: fixed; left: 0; right: 0; bottom: 0;
