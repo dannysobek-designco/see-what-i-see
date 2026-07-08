@@ -549,8 +549,15 @@ function showTourStep(){
   }
   setTimeout(() => {
     const el = document.querySelector(step.sel);
-    if(el && step.panel && isMobile()) el.scrollIntoView({ block: "center" });
-    setTimeout(positionTour, el && step.panel && isMobile() ? 60 : 0);
+    // bring panel-internal targets into view on every screen size — on
+    // desktop the panel is a scroll container too, so the share block near
+    // the bottom would otherwise sit below the fold
+    if(el && step.panel){
+      el.scrollIntoView({ block: "center", inline: "nearest" });
+      setTimeout(positionTour, 60);
+    } else {
+      positionTour();
+    }
   }, delay);
 }
 
@@ -571,8 +578,11 @@ function positionTour(){
   const vw = innerWidth, vh = innerHeight, gap = 14, m = 12;
   const below = vh - r.bottom, above = r.top;
   let top;
-  if(below >= ph + gap || below >= above) top = Math.min(r.bottom + gap, vh - ph - m);
-  else top = Math.max(r.top - ph - gap, m);
+  if(below >= ph + gap || below >= above) top = r.bottom + gap;
+  else top = r.top - ph - gap;
+  // always keep the popover on-screen so its buttons stay reachable, even
+  // if the target couldn't be fully scrolled into view
+  top = Math.max(m, Math.min(top, vh - ph - m));
   let left = r.left + r.width / 2 - pw / 2;
   left = Math.max(m, Math.min(left, vw - pw - m));
   pop.style.top = top + "px";
