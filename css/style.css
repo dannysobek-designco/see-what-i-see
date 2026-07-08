@@ -129,10 +129,19 @@ body {
 
 /* live-camera group (mobile): a Live camera button that expands to
    Normal / VR options; emphasized because it's the best experience */
-#cam-group { gap: 10px; align-items: center; }
-.cam-opt { display: none; }
-#cam-group.expanded #btn-cam { display: none; }
-#cam-group.expanded .cam-opt { display: inline-flex; }
+#cam-group { position: relative; }
+/* options float above the Live camera button — absolute so the utility
+   row never reflows when they appear */
+#cam-options {
+  position: absolute;
+  left: 0; bottom: calc(100% + 8px);
+  display: flex; gap: 8px;
+  animation: cam-pop .16s ease-out;
+}
+#cam-group:not(.expanded) #cam-options { display: none; }
+@keyframes cam-pop {
+  from { opacity: 0; transform: translateY(6px); }
+}
 .cam-cta {
   border-color: var(--accent);
   color: var(--accent-strong);
@@ -140,6 +149,15 @@ body {
   box-shadow: 0 2px 16px rgba(47, 107, 255, .35);
 }
 .cam-cta svg { opacity: .95; }
+/* "Normal" is the recommended choice — emphasized as a filled accent pill */
+.cam-opt-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(47, 107, 255, .4);
+}
+.cam-opt-primary:hover { background: var(--accent-strong); }
 
 /* ————— split compare ————— */
 
@@ -596,4 +614,9 @@ body.vr { grid-template-columns: 1fr; }
      camera chip is redundant here, so hide it */
   #btn-vr { display: none; }
   #scene-chips .chip-cam { display: none; }
+
+  /* Live camera sits on its own row at the top of the cluster, so its
+     Normal / VR options pop up into empty canvas instead of onto the
+     compare / split buttons */
+  #cam-group { order: -1; flex-basis: 100%; }
 }

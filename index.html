@@ -55,14 +55,17 @@
     <button id="btn-split" class="stage-btn" title="Split the view: typical vision beside VSS">Split&nbsp;view</button>
     <button id="btn-vr" class="stage-btn" title="Side-by-side view for a phone VR headset">VR&nbsp;view</button>
 
-    <!-- mobile: prominent live-camera entry that expands to Normal / VR -->
+    <!-- mobile: prominent live-camera entry; taps float Normal / VR options
+         ABOVE the button so the row never reflows -->
     <div id="cam-group" class="only-mobile">
+      <div id="cam-options">
+        <button id="btn-cam-normal" class="stage-btn cam-opt-primary">Normal</button>
+        <button id="btn-cam-vr" class="stage-btn">VR&nbsp;view</button>
+      </div>
       <button id="btn-cam" class="stage-btn cam-cta" title="See VSS over your live camera">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         Live&nbsp;camera
       </button>
-      <button id="btn-cam-normal" class="stage-btn cam-opt">Normal</button>
-      <button id="btn-cam-vr" class="stage-btn cam-opt">VR&nbsp;view</button>
     </div>
   </div>
 

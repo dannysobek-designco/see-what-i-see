@@ -403,6 +403,7 @@ btnVr.addEventListener("click", enterVR);
 canvas.addEventListener("pointerdown", () => {
   if(vrMode) exitVR();
   else document.body.classList.remove("panel-open");
+  camGroup?.classList.remove("expanded");   // dismiss floating cam options
 });
 document.addEventListener("fullscreenchange", () => {
   if(!document.fullscreenElement) exitVR();
