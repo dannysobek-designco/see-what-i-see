@@ -127,6 +127,20 @@ body {
 
 .only-mobile { display: none; }
 
+/* live-camera group (mobile): a Live camera button that expands to
+   Normal / VR options; emphasized because it's the best experience */
+#cam-group { gap: 10px; align-items: center; }
+.cam-opt { display: none; }
+#cam-group.expanded #btn-cam { display: none; }
+#cam-group.expanded .cam-opt { display: inline-flex; }
+.cam-cta {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  font-weight: 600;
+  box-shadow: 0 2px 16px rgba(47, 107, 255, .35);
+}
+.cam-cta svg { opacity: .95; }
+
 /* ————— split compare ————— */
 
 #split-ui { position: absolute; inset: 0; pointer-events: none; }
@@ -570,9 +584,16 @@ body.vr { grid-template-columns: 1fr; }
 
   #panel-grip {
     display: flex; justify-content: center;
-    padding: 4px 0 8px; cursor: grab; flex: none;
+    padding: 10px 0 12px; cursor: grab; flex: none;
+    touch-action: none;             /* we handle the drag ourselves */
   }
   #panel-grip span {
     width: 42px; height: 5px; border-radius: 3px; background: var(--line-2);
   }
+  #panel.dragging { transition: none; }   /* follow the finger without lag */
+
+  /* VR is reached via the Live camera group on mobile; the panel's own
+     camera chip is redundant here, so hide it */
+  #btn-vr { display: none; }
+  #scene-chips .chip-cam { display: none; }
 }

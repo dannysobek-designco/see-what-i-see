@@ -241,7 +241,8 @@ document.querySelectorAll("#scene-chips .chip").forEach(chip => {
       fileInput.click();
       return; // chip activates after a file is actually chosen
     } else if(s === "camera"){
-      ok = await useCamera();
+      selectCamera(false);   // handles its own active-state + errors
+      return;
     } else {
       ok = await useScene(s);
     }
@@ -251,6 +252,24 @@ document.querySelectorAll("#scene-chips .chip").forEach(chip => {
     }
   });
 });
+
+/* ————— live camera (shared by panel chip + mobile stage group) ————— */
+
+const camGroup = document.getElementById("cam-group");
+
+async function selectCamera(vr){
+  if(camGroup) camGroup.classList.remove("expanded");
+  const ok = await useCamera();
+  if(!ok) return;
+  document.querySelectorAll("#scene-chips .chip").forEach(c => c.classList.remove("active"));
+  document.querySelector('[data-scene="camera"]').classList.add("active");
+  if(vr) enterVR();
+  else if(vrMode) exitVR();
+}
+
+document.getElementById("btn-cam").addEventListener("click", () => camGroup.classList.toggle("expanded"));
+document.getElementById("btn-cam-normal").addEventListener("click", () => selectCamera(false));
+document.getElementById("btn-cam-vr").addEventListener("click", () => selectCamera(true));
 
 fileInput.addEventListener("change", () => {
   const f = fileInput.files[0];
@@ -310,6 +329,16 @@ function updateTinnitus(level){
 document.addEventListener("pointerdown", () => {
   if(state.tinnitus > 0.001) initTinnitus();
 }, { once: true });
+
+// stop the tone when the app is backgrounded or the screen locks — otherwise
+// it keeps ringing until the tab is physically closed. Resume on return only
+// if tinnitus is still switched on.
+document.addEventListener("visibilitychange", () => {
+  if(!tinn.ctx) return;
+  if(document.hidden) tinn.ctx.suspend();
+  else if(state.tinnitus > 0.001) tinn.ctx.resume();
+});
+addEventListener("pagehide", () => { if(tinn.ctx) tinn.ctx.suspend(); });
 
 /* ————— split compare view ————— */
 
@@ -408,9 +437,32 @@ function openPanel(){
   document.body.classList.add("panel-open", "controls-used");
 }
 document.getElementById("btn-panel").addEventListener("click", openPanel);
-document.getElementById("panel-grip").addEventListener("click", () => {
-  document.body.classList.toggle("panel-open");
+
+// swipe the sheet down by its grip to dismiss it (a plain tap closes too)
+const panelEl = document.getElementById("panel");
+const grip = document.getElementById("panel-grip");
+let gripDrag = null;
+grip.addEventListener("pointerdown", e => {
+  gripDrag = { startY: e.clientY, dy: 0 };
+  grip.setPointerCapture(e.pointerId);
+  panelEl.classList.add("dragging");
 });
+grip.addEventListener("pointermove", e => {
+  if(!gripDrag) return;
+  gripDrag.dy = Math.max(0, e.clientY - gripDrag.startY);
+  panelEl.style.transform = `translateY(${gripDrag.dy}px)`;
+});
+function endGripDrag(){
+  if(!gripDrag) return;
+  const dy = gripDrag.dy;
+  gripDrag = null;
+  panelEl.classList.remove("dragging");
+  panelEl.style.transform = "";          // hand back to the CSS transition
+  // a tap or a real downward swipe closes; a small drag snaps back open
+  if(dy < 6 || dy > 80) document.body.classList.remove("panel-open");
+}
+grip.addEventListener("pointerup", endGripDrag);
+grip.addEventListener("pointercancel", endGripDrag);
 document.getElementById("btn-about").addEventListener("click", () => {
   document.getElementById("about").showModal();
 });
