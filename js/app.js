@@ -175,7 +175,10 @@ for(const g of GROUPS){
       r.addEventListener("input", () => {
         presetAnim = null;
         state[c.key] = r.value/100;
-        if(c.key === "tinnitus" && state.tinnitus > 0.001) initTinnitus();
+        if(c.key === "tinnitus"){
+          if(state.tinnitus > 0.001) initTinnitus();
+          updateMuteVisibility();
+        }
         paintSlider(r, ctl);
         customized();
       });
@@ -200,6 +203,7 @@ function refreshUI(){
     if(el.type === "checkbox") el.checked = state[key] > 0.5;
     else { el.value = Math.round(state[key]*100); paintSlider(el, el.closest(".ctl")); }
   }
+  updateMuteVisibility();   // presets / shared link / My VSS may change tinnitus
 }
 
 function clearPresetActive(){
@@ -300,7 +304,13 @@ btnCompare.addEventListener("contextmenu", e => e.preventDefault());
 
 /* ————— tinnitus (opt-in audio) ————— */
 
-const tinn = { ctx: null, gain: null };
+const tinn = { ctx: null, gain: null, muted: false };
+const btnMute = document.getElementById("btn-mute");
+btnMute.addEventListener("click", () => {
+  tinn.muted = !tinn.muted;
+  btnMute.classList.toggle("muted", tinn.muted);
+  btnMute.setAttribute("aria-label", tinn.muted ? "Unmute the tinnitus sound" : "Mute the tinnitus sound");
+});
 
 function initTinnitus(){
   if(tinn.ctx){ tinn.ctx.resume?.(); return; }
@@ -319,10 +329,19 @@ function initTinnitus(){
   } catch {}
 }
 
+// the mute button only exists while there's a tone to mute; called on any
+// change to the tinnitus setting (not per-frame, so it's independent of the
+// render loop)
+function updateMuteVisibility(){
+  btnMute.hidden = !(state.tinnitus > 0.001);
+}
+
 function updateTinnitus(level){
   if(!tinn.ctx) return;
-  // keep it gentle even at 100%
-  tinn.gain.gain.setTargetAtTime(level * 0.045, tinn.ctx.currentTime, 0.12);
+  // keep it gentle even at 100%; the mute toggle silences without
+  // touching the slider value
+  const target = (tinn.muted ? 0 : level) * 0.045;
+  tinn.gain.gain.setTargetAtTime(target, tinn.ctx.currentTime, 0.12);
 }
 
 // if settings restored on load include tinnitus, start it on the first tap
@@ -550,7 +569,7 @@ const TOUR_STEPS = [
   { sel: "#btn-compare",  panel: false, title: "Compare with typical vision",
     body: "Press and hold this any time to drop the symptoms away, so others can see the difference. “Split view” shows both at once." },
   { sel: "#share-block",  panel: true,  title: "Share exactly what you see",
-    body: "Once it looks right, copy a link — whoever opens it sees your precise settings. The best way to say “this is what my eyes do.”" },
+    body: "Tune it, then copy a link — whoever opens it sees your exact settings. If you have visual snow, this is precisely what you see; if you don’t, it’s a way to experience what it’s like." },
 ];
 
 const tour = {

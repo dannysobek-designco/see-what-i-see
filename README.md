@@ -31,7 +31,8 @@ Extras:
   on one side, VSS on the other)
 - **Shareable links** — copy a URL that reproduces your exact settings
 - Opt-in **tinnitus** audio (a thin high-pitched tone), since most people
-  with VSS also live with ringing ears
+  with VSS also live with ringing ears; a mute toggle appears on screen only
+  while the tone is active
 - A first-visit intro with a photosensitivity heads-up, followed by an
   optional guided walkthrough (replayable anytime from the footer) that
   spotlights each part of the UI — on every screen size

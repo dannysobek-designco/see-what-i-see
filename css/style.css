@@ -127,6 +127,28 @@ body {
 
 .only-mobile { display: none; }
 
+/* mute toggle — top-right, only visible while tinnitus is playing */
+.mute-btn {
+  position: absolute; top: 20px; right: 24px;
+  width: 42px; height: 42px; border-radius: 50%;
+  appearance: none; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.4);
+  background: rgba(255,255,255,.82);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  color: var(--text);
+  box-shadow: 0 2px 14px rgba(10,14,24,.22);
+  transition: background .15s, transform .1s;
+  z-index: 20;
+}
+.mute-btn:not([hidden]) { display: grid; place-items: center; }
+.mute-btn:hover { background: rgba(255,255,255,.95); }
+.mute-btn:active { transform: scale(.94); }
+.mute-btn .ic-off { display: none; }
+.mute-btn.muted { color: var(--accent-strong); }
+.mute-btn.muted .ic-on { display: none; }
+.mute-btn.muted .ic-off { display: block; }
+
 /* live-camera group (mobile): a Live camera button that expands to
    Normal / VR options; emphasized because it's the best experience */
 #cam-group { position: relative; }
@@ -483,7 +505,7 @@ body {
 
 /* ————— VR mode ————— */
 
-body.vr #panel, body.vr #brand, body.vr #stage-actions, body.vr #btn-panel { display: none; }
+body.vr #panel, body.vr #brand, body.vr #stage-actions, body.vr #btn-panel, body.vr #btn-mute { display: none; }
 
 /* ————— mobile controls CTA (base reset; positioned in media query) ————— */
 
@@ -571,8 +593,9 @@ body.vr { grid-template-columns: 1fr; }
   #stage-actions {
     left: 16px; right: 16px;
     bottom: calc(max(14px, env(safe-area-inset-bottom)) + 68px);
+    gap: 7px;
   }
-  #stage-actions .stage-btn { font-size: .78rem; padding: 8px 12px; }
+  #stage-actions .stage-btn { font-size: .72rem; padding: 7px 10px; white-space: nowrap; }
 
   /* the primary way in: a prominent, full-width control opener */
   #btn-panel {
@@ -625,8 +648,6 @@ body.vr { grid-template-columns: 1fr; }
   #btn-vr { display: none; }
   #scene-chips .chip-cam { display: none; }
 
-  /* Live camera sits on its own row at the top of the cluster, so its
-     Normal / VR options pop up into empty canvas instead of onto the
-     compare / split buttons */
-  #cam-group { order: -1; flex-basis: 100%; }
+  /* Live camera sits on the same line as compare / split; its Normal / VR
+     options pop up into empty canvas above the single row */
 }
