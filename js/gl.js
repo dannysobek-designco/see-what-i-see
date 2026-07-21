@@ -72,6 +72,7 @@ out vec4 frag;
 uniform sampler2D uTex;    // trailed base scene (canvas-sized)
 uniform sampler2D uScene;  // original source, mipmapped (for glare/halo blurs)
 uniform vec2 uView, uCanvas, uSceneSize;
+uniform float uCssH;   // stage height in CSS pixels, for device-independent sizing
 uniform float uTime;
 uniform float uGlare, uHalo;
 uniform float uZoom, uPan;
@@ -155,21 +156,37 @@ void main(){
     col = clamp(col, 0.0, 1.0);
   }
 
-  // — floaters: translucent drifting strands —
+  // — floaters: thin, dark, out-of-focus strands (like real vitreous
+  //   floaters), fading in and out as if blinked away —
   for(int i=0;i<12;i++){
     if(i >= uFloaterCount) break;
-    vec4 f = uFloaters[i];
+    vec4 f = uFloaters[i];          // xy position, z seed, w fade 0..1
+    if(f.w < 0.02) continue;
     vec2 d = uv - f.xy;
     d.x *= aspect;
-    float ang = f.w*6.2831 + uTime*0.07;
+    float seed = f.z;
+    float ang = seed*6.2831 + uTime*0.05;
     vec2 dir = vec2(cos(ang), sin(ang));
-    float m = 0.0;
-    for(int j=0;j<3;j++){
-      vec2 cc = d - dir*(float(j)-1.0)*f.z*1.15;
-      float rr = f.z*(0.72 + 0.28*sin(f.w*41.0 + float(j)*2.13));
-      m = max(m, smoothstep(rr, rr*0.25, length(cc)));
+    vec2 perp = vec2(-dir.y, dir.x);
+    float len  = 0.035 + 0.085*fract(seed*7.31);   // strand length
+    float bend = 0.010 + 0.022*fract(seed*13.7);   // how curled it is
+    float freq = 5.0 + 6.0*fract(seed*3.37);
+    // distance to a wiggly polyline
+    float md = 1e3;
+    vec2 pPrev = -dir*0.5*len + perp*bend*sin(-0.5*freq + seed*40.0);
+    for(int j=1;j<8;j++){
+      float s = float(j)/7.0 - 0.5;
+      vec2 pCur = dir*s*len + perp*bend*sin(s*freq + seed*40.0);
+      vec2 seg = pCur - pPrev;
+      float h = clamp(dot(d - pPrev, seg)/dot(seg, seg), 0.0, 1.0);
+      md = min(md, length(d - pPrev - seg*h));
+      pPrev = pCur;
     }
-    col = mix(col, col*0.62 + vec3(0.015), m*min(uFloaterAmt*1.5,1.0)*0.72);
+    float w = 0.0028 + 0.0028*fract(seed*5.7);     // thin core
+    float core = smoothstep(w, w*0.15, md);
+    float halo = smoothstep(w*3.2, w*0.4, md);     // defocus blur
+    float a = (core*0.7 + halo*0.35) * f.w * min(uFloaterAmt*1.6, 1.0);
+    col = mix(col, col*0.55 + vec3(0.02), min(a, 1.0));
   }
 
   // — blue-field entoptic phenomenon: quick darting bright dots —
@@ -197,7 +214,10 @@ void main(){
 
   // — visual snow: dynamic dots across the entire field —
   if(uSnow > 0.001){
-    float px = mix(1.6, 5.5, uSnowSize) * max(uView.y, 1.0)/800.0;
+    // dot size is defined in CSS pixels (uView.y/uCssH = effective device
+    // scale), so the static reads the same on phone and desktop regardless
+    // of pixel ratio or adaptive-quality scaling
+    float px = mix(1.3, 3.6, uSnowSize) * max(uView.y, 1.0)/max(uCssH, 1.0);
     px = max(px, 1.0);
     vec2 cell = floor(uv * uView / px);
     float fr = mod(floor(uTime * mix(7.0, 52.0, uSnowSpeed)), 1024.0);
@@ -239,7 +259,7 @@ class VSSRenderer {
     this.uS = this._uniforms(this.progScene,
       ["uScene","uPrev","uRes","uSceneSize","uGhost","uNyct","uTrail","uZoom","uPan"]);
     this.uO = this._uniforms(this.progOverlay,
-      ["uTex","uScene","uView","uCanvas","uSceneSize","uTime","uGlare","uHalo","uZoom","uPan","uClean",
+      ["uTex","uScene","uView","uCanvas","uSceneSize","uCssH","uTime","uGlare","uHalo","uZoom","uPan","uClean",
        "uSnow","uSnowDensity","uSnowSize","uSnowSpeed","uSnowColor",
        "uPulse","uFloaterAmt","uBfepAmt","uFloaterCount","uBfepCount","uFloaters","uBfep","uFlash"]);
 
@@ -257,11 +277,12 @@ class VSSRenderer {
     this.width = 0; this.height = 0;
 
     // particle state
-    this.floaters = Array.from({length:12}, (_, i) => ({
+    this.floaters = Array.from({length:12}, () => ({
       bx: Math.random(), by: Math.random()*0.8 + 0.1,
-      r: 0.018 + Math.random()*0.035,
       seed: Math.random(),
-      p1: Math.random()*6.28, p2: Math.random()*6.28
+      p1: Math.random()*6.28, p2: Math.random()*6.28,
+      visible: true, fade: Math.random(),        // staggered at startup
+      nextToggle: Math.random()*6
     }));
     this.bfep = Array.from({length:32}, () => this._spawnBfep(true));
     this.flash = { x:0.5, y:0.5, i:0, r:0.1 };
@@ -324,7 +345,8 @@ class VSSRenderer {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   }
 
-  resize(w, h){
+  resize(w, h, cssH){
+    this.cssH = cssH || this.cssH || h;
     if(w === this.width && h === this.height) return;
     this.width = w; this.height = h;
     this.canvas.width = w; this.canvas.height = h;
@@ -362,12 +384,23 @@ class VSSRenderer {
     const dt = Math.min(t - this.lastT, 0.05);
     this.lastT = t;
 
-    // floaters wander slowly
+    // floaters wander slowly and blink in/out: visible for a stretch, then
+    // fade away (as after a blink) and reappear somewhere nearby
     for(let i=0;i<12;i++){
       const f = this.floaters[i];
+      if(t >= f.nextToggle){
+        f.visible = !f.visible;
+        f.nextToggle = t + (f.visible ? 3.5 + Math.random()*5 : 0.6 + Math.random()*2.2);
+        if(f.visible){                 // blinks shift floaters to a new spot
+          f.bx = Math.random();
+          f.by = Math.random()*0.8 + 0.1;
+          f.seed = Math.random();
+        }
+      }
+      f.fade += ((f.visible ? 1 : 0) - f.fade) * Math.min(dt*5, 1);
       const x = f.bx + Math.sin(t*0.11 + f.p1)*0.05 + Math.sin(t*0.031 + f.p2)*0.03;
       const y = f.by + Math.cos(t*0.087 + f.p2)*0.05 + Math.sin(t*0.021 + f.p1)*0.04;
-      this.floaterData.set([x, y, f.r, f.seed], i*4);
+      this.floaterData.set([x, y, f.seed, f.fade], i*4);
     }
 
     // blue-field sprites dart along wiggly paths
@@ -440,6 +473,7 @@ class VSSRenderer {
     gl.uniform1i(this.uO.uScene, 1);
     gl.uniform2f(this.uO.uCanvas, this.width, this.height);
     gl.uniform2f(this.uO.uSceneSize, this.source.w, this.source.h);
+    gl.uniform1f(this.uO.uCssH, this.cssH || this.height);
     gl.uniform1f(this.uO.uGlare, P.glare);
     gl.uniform1f(this.uO.uHalo, P.halos);
     gl.uniform1f(this.uO.uZoom, zoom);

@@ -250,6 +250,7 @@ body {
 }
 
 #panel-grip { display: none; }
+#panel-done { display: none; }   /* mobile-only; shown in the media query */
 
 .panel-block {
   background: var(--card);
@@ -363,6 +364,13 @@ body {
   border: 1px solid var(--line-2); border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 6px rgba(16,34,70,.25);
+}
+
+/* touch screens: the row (not the native input) owns the gesture — taps do
+   nothing, horizontal drags adjust relatively, vertical swipes scroll */
+@media (pointer: coarse) {
+  .ctl { touch-action: pan-y; }
+  .ctl input[type="range"] { pointer-events: none; }
 }
 
 .ctl-toggle {
@@ -642,6 +650,20 @@ body.vr { grid-template-columns: 1fr; }
     width: 42px; height: 5px; border-radius: 3px; background: var(--line-2);
   }
   #panel.dragging { transition: none; }   /* follow the finger without lag */
+
+  /* sticky Done button: always in reach while scrolling the settings */
+  #panel-done {
+    display: block;
+    position: sticky; bottom: 0;
+    z-index: 5;
+    appearance: none; font: inherit; cursor: pointer;
+    width: 100%;
+    background: var(--grad-blue); color: #fff;
+    border: none; border-radius: 12px;
+    padding: 13px 16px;
+    font-size: .92rem; font-weight: 600;
+    box-shadow: 0 -10px 24px rgba(244, 247, 252, .9), 0 6px 18px rgba(34, 88, 232, .35);
+  }
 
   /* VR is reached via the Live camera group on mobile; the panel's own
      camera chip is redundant here, so hide it */

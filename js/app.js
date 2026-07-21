@@ -182,6 +182,33 @@ for(const g of GROUPS){
         paintSlider(r, ctl);
         customized();
       });
+      // touch-safe adjustment: on touch screens the input itself ignores
+      // taps (see pointer:coarse CSS); a horizontal drag anywhere on the row
+      // nudges the value RELATIVE to where it was, so brushing the track
+      // with a thumb can't slam it to max. Vertical swipes scroll the panel.
+      let tdrag = null;
+      ctl.addEventListener("touchstart", e => {
+        const t = e.touches[0];
+        tdrag = { x: t.clientX, y: t.clientY, v: +r.value, engaged: false, dead: false };
+      }, { passive: true });
+      ctl.addEventListener("touchmove", e => {
+        if(!tdrag || tdrag.dead) return;
+        const t = e.touches[0];
+        const dx = t.clientX - tdrag.x, dy = t.clientY - tdrag.y;
+        if(!tdrag.engaged){
+          if(Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)){ tdrag.dead = true; return; }
+          if(Math.abs(dx) > 10) tdrag.engaged = true;
+          else return;
+        }
+        e.preventDefault();
+        const width = r.getBoundingClientRect().width || 1;
+        const nv = Math.round(Math.min(100, Math.max(0, tdrag.v + dx/width*100)));
+        if(nv !== +r.value){ r.value = nv; r.dispatchEvent(new Event("input")); }
+      }, { passive: false });
+      const endTdrag = () => { tdrag = null; };
+      ctl.addEventListener("touchend", endTdrag);
+      ctl.addEventListener("touchcancel", endTdrag);
+
       ctl.appendChild(r);
       paintSlider(r, ctl);
       sec.appendChild(ctl);
@@ -486,6 +513,9 @@ grip.addEventListener("pointercancel", endGripDrag);
 document.getElementById("btn-about").addEventListener("click", () => {
   document.getElementById("about").showModal();
 });
+document.getElementById("panel-done").addEventListener("click", () => {
+  document.body.classList.remove("panel-open");
+});
 
 let toastTimer;
 function toast(msg, ms = 3000){
@@ -498,7 +528,9 @@ function toast(msg, ms = 3000){
 
 /* ————— main loop ————— */
 
-const DPR_CAP = 2;
+// render at native pixel ratio (phones are often 3x): capping lower makes
+// the browser upscale the buffer, which visibly softens the static on mobile
+const DPR_CAP = 3;
 let qualityScale = 1, frameEma = 16, lastFrameTs = 0, qualityTick = 0;
 
 function frame(now){
@@ -510,7 +542,8 @@ function frame(now){
     frameEma += (Math.min(now - lastFrameTs, 100) - frameEma) * 0.05;
     if(++qualityTick >= 90){
       qualityTick = 0;
-      if(frameEma > 22 && qualityScale > 0.55) qualityScale = Math.max(0.5, qualityScale - 0.15);
+      // floor at 0.7 — dropping lower turns the fine static into soft mush
+      if(frameEma > 22 && qualityScale > 0.75) qualityScale = Math.max(0.7, qualityScale - 0.15);
       else if(frameEma < 15 && qualityScale < 1) qualityScale = Math.min(1, qualityScale + 0.15);
     }
   }
@@ -519,7 +552,7 @@ function frame(now){
   const dpr = Math.min(devicePixelRatio || 1, DPR_CAP) * qualityScale;
   const w = Math.max(1, Math.round(stage.clientWidth * dpr));
   const h = Math.max(1, Math.round(stage.clientHeight * dpr));
-  renderer.resize(w, h);
+  renderer.resize(w, h, stage.clientHeight);
 
   // preset transitions ease instead of snapping
   if(presetAnim){
