@@ -80,7 +80,7 @@ uniform sampler2D uScene;  // original source, mipmapped (for glare/halo blurs)
 uniform vec2 uView, uCanvas, uSceneSize;
 uniform float uCssH;   // stage height in CSS pixels, for device-independent sizing
 uniform float uTime;
-uniform float uGlare, uHalo;
+uniform float uGlare, uHalo, uRainbow;
 uniform float uZoom, uPan;
 uniform float uClean;      // 1 = render the untouched scene (split compare)
 uniform float uSnow, uSnowDensity, uSnowSize, uSnowSpeed, uSnowColor;
@@ -127,17 +127,34 @@ void main(){
   if(uPulse > 0.001) col *= 1.0 + pulseWave*0.03*uPulse;
 
   // — glare & halos, computed from the blurred original scene —
-  if(uGlare > 0.001 || uHalo > 0.001){
+  if(uGlare > 0.001 || uHalo > 0.001 || uRainbow > 0.001){
     vec2 suv = coverUv(uv);
     vec3 blur1 = textureLod(uScene, suv, 3.5).rgb;
     vec3 blur2 = textureLod(uScene, suv, 5.5).rgb;
     float wideL = luma(blur2);
+    // halos belong to light SOURCES: bright vs. their wide surroundings,
+    // so a uniformly bright scene (white page, day sky) must not bloom
+    float wideL3 = luma(textureLod(uScene, suv, 7.5).rgb);
+    float srcness = smoothstep(0.04, 0.28, wideL - wideL3*0.9);
+
+    if(uRainbow > 0.001){
+      // diffraction corona: the blurred brightness field decays radially
+      // from each light, so its iso-brightness contours form rings around
+      // every source — paint them spectrally (violet inner, red outer).
+      // Gate on glow spilling over darker surroundings (light against its
+      // backdrop), so uniformly bright scenes don't ring.
+      float t = smoothstep(0.08, 0.6, wideL);      // 0 outer edge → 1 near light
+      float window = t * (1.0 - t) * 4.0;          // fade at both ends
+      window *= window;
+      float gate = smoothstep(0.05, 0.18, wideL - luma(col)*0.9);
+      // one smooth spectral sweep across the ring: green near the light,
+      // through blue and violet, to pink-red at the outer rim
+      float hue = 0.3 + (1.0 - t) * 0.65;
+      vec3 spec = 0.5 + 0.5*cos(6.28318*(hue - vec3(0.0, 0.3333, 0.6667)));
+      col += spec * window * gate * uRainbow * 0.5;
+    }
 
     if(uHalo > 0.001){
-      // halos belong to light SOURCES: bright vs. their wide surroundings,
-      // so a uniformly bright scene (white page, day sky) must not bloom
-      float wideL3 = luma(textureLod(uScene, suv, 7.5).rgb);
-      float srcness = smoothstep(0.04, 0.28, wideL - wideL3*0.9);
       col += blur2 * smoothstep(0.3, 0.85, wideL) * srcness * uHalo * 1.6;
       vec3 st = vec3(0.0);
       for(int i=0;i<8;i++){
@@ -175,13 +192,13 @@ void main(){
     vec2 dir = vec2(cos(ang), sin(ang));
     vec2 perp = vec2(-dir.y, dir.x);
     float len  = 0.035 + 0.085*fract(seed*7.31);   // strand length
-    float bend = 0.010 + 0.022*fract(seed*13.7);   // how curled it is
-    float freq = 5.0 + 6.0*fract(seed*3.37);
-    // distance to a wiggly polyline
+    float bend = 0.008 + 0.016*fract(seed*13.7);   // gentler curl
+    float freq = 3.5 + 4.0*fract(seed*3.37);       // lower wiggle frequency
+    // distance to a wiggly polyline (finer segments → smoother curve)
     float md = 1e3;
     vec2 pPrev = -dir*0.5*len + perp*bend*sin(-0.5*freq + seed*40.0);
-    for(int j=1;j<8;j++){
-      float s = float(j)/7.0 - 0.5;
+    for(int j=1;j<12;j++){
+      float s = float(j)/11.0 - 0.5;
       vec2 pCur = dir*s*len + perp*bend*sin(s*freq + seed*40.0);
       vec2 seg = pCur - pPrev;
       float h = clamp(dot(d - pPrev, seg)/dot(seg, seg), 0.0, 1.0);
@@ -189,9 +206,10 @@ void main(){
       pPrev = pCur;
     }
     float w = 0.0028 + 0.0028*fract(seed*5.7);     // thin core
-    float core = smoothstep(w, w*0.15, md);
-    float halo = smoothstep(w*3.2, w*0.4, md);     // defocus blur
-    float a = (core*0.7 + halo*0.35) * f.w * min(uFloaterAmt*1.6, 1.0);
+    // wide, soft falloffs — real floaters sit far out of focus
+    float core = smoothstep(w*2.2, w*0.3, md);
+    float halo = smoothstep(w*6.0, w*0.8, md);     // defocus blur
+    float a = (core*0.42 + halo*0.34) * f.w * min(uFloaterAmt*1.6, 1.0);
     col = mix(col, col*0.55 + vec3(0.02), min(a, 1.0));
   }
 
@@ -265,7 +283,7 @@ class VSSRenderer {
     this.uS = this._uniforms(this.progScene,
       ["uScene","uPrev","uRes","uSceneSize","uGhost","uNyct","uTrail","uZoom","uPan"]);
     this.uO = this._uniforms(this.progOverlay,
-      ["uTex","uScene","uView","uCanvas","uSceneSize","uCssH","uTime","uGlare","uHalo","uZoom","uPan","uClean",
+      ["uTex","uScene","uView","uCanvas","uSceneSize","uCssH","uTime","uGlare","uHalo","uRainbow","uZoom","uPan","uClean",
        "uSnow","uSnowDensity","uSnowSize","uSnowSpeed","uSnowColor",
        "uPulse","uFloaterAmt","uBfepAmt","uFloaterCount","uBfepCount","uFloaters","uBfep","uFlash"]);
 
@@ -482,6 +500,7 @@ class VSSRenderer {
     gl.uniform1f(this.uO.uCssH, this.cssH || this.height);
     gl.uniform1f(this.uO.uGlare, P.glare);
     gl.uniform1f(this.uO.uHalo, P.halos);
+    gl.uniform1f(this.uO.uRainbow, P.rainbow);
     gl.uniform1f(this.uO.uZoom, zoom);
     gl.uniform1f(this.uO.uPan, pan);
     gl.uniform1f(this.uO.uTime, t);

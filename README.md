@@ -12,7 +12,8 @@ diagnostic criteria (see [visualsnowinitiative.org](https://www.visualsnowinitia
 - **Enhanced entoptic phenomena** — floaters, blue-field darting dots,
   photopsia light flashes
 - **Photophobia** — glare bloom and washout veil
-- **Halos & starbursts** around light sources
+- **Halos & starbursts** around light sources, plus **rainbow halos**
+  (diffraction-style spectral rings hugging each light)
 - **Nyctalopia** — impaired night vision (shadow detail collapses)
 - **Double vision** and **pulsating vision**
 
