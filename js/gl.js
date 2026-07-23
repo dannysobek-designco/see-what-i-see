@@ -16,6 +16,9 @@ void main(){ vUv = aPos*0.5+0.5; gl_Position = vec4(aPos,0.,1.); }`;
 
 const SCENE_FRAG = `#version 300 es
 precision highp float;
+precision highp int;   /* ints default to mediump in ES fragment shaders —
+                          16-bit on some mobile GPUs, which breaks the
+                          integer hash (and with it, the snow) entirely */
 in vec2 vUv;
 out vec4 frag;
 uniform sampler2D uScene, uPrev;
@@ -67,6 +70,9 @@ void main(){
 
 const OVERLAY_FRAG = `#version 300 es
 precision highp float;
+precision highp int;   /* ints default to mediump in ES fragment shaders —
+                          16-bit on some mobile GPUs, which breaks the
+                          integer hash (and with it, the snow) entirely */
 in vec2 vUv;
 out vec4 frag;
 uniform sampler2D uTex;    // trailed base scene (canvas-sized)
@@ -86,8 +92,8 @@ uniform vec4 uFlash;
 
 float luma(vec3 c){ return dot(c, vec3(0.299,0.587,0.114)); }
 float hash21(vec2 p){
-  uvec2 q = uvec2(ivec2(p) + 32768) * uvec2(1597334673u, 3812015801u);
-  uint n = (q.x ^ q.y) * 1597334673u;
+  highp uvec2 q = uvec2(ivec2(p) + 32768) * uvec2(1597334673u, 3812015801u);
+  highp uint n = (q.x ^ q.y) * 1597334673u;
   return float(n) * (1.0/4294967295.0);
 }
 
