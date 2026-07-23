@@ -228,15 +228,15 @@ void main(){
     vec2 cell = floor(uv * uView / px);
     float fr = mod(floor(uTime * mix(7.0, 52.0, uSnowSpeed)), 1024.0);
     vec2 fo = vec2(fr*127.0, fr*311.0);
-    float dens = mix(0.05, 0.62, uSnowDensity);
+    float dens = mix(0.04, 0.5, uSnowDensity);
     float on = step(1.0 - dens, hash21(cell + fo));
     if(on > 0.5){
       float h2 = hash21(cell*1.61 + fo + 4.7);
       if(uSnowColor > 0.5){
         vec3 rc = vec3(hash21(cell+fo+9.1), hash21(cell+fo+13.7), hash21(cell+fo+17.3)) - 0.5;
-        col += rc * 0.9 * uSnow;
+        col += rc * 0.62 * uSnow;
       } else {
-        col += (step(0.5, h2)*2.0 - 1.0) * uSnow * 0.42;
+        col += (step(0.5, h2)*2.0 - 1.0) * uSnow * 0.28;
       }
     }
   }
