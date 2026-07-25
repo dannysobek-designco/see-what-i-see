@@ -405,6 +405,22 @@ body {
 }
 #share-block .fine { color: rgba(255,255,255,.75); }
 
+.share-tools { display: flex; gap: 8px; margin-top: 10px; }
+.tool-btn {
+  appearance: none; font: inherit; font-size: .8rem; font-weight: 600;
+  flex: 1;
+  background: rgba(255,255,255,.16);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 9px;
+  padding: 9px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, transform .1s;
+}
+.tool-btn:hover { background: rgba(255,255,255,.26); }
+.tool-btn:active { transform: scale(.97); }
+
 .wide-btn {
   appearance: none; font: inherit; font-size: .88rem;
   width: 100%;
@@ -442,7 +458,7 @@ body {
 
 /* ————— dialogs (about + intro) ————— */
 
-#about, #intro, #source-pick {
+#about, #intro, #source-pick, #qr-dialog {
   border: none;
   border-radius: 20px;
   background: var(--card);
@@ -453,14 +469,14 @@ body {
   margin: auto;
   box-shadow: var(--shadow-pop);
 }
-#about::backdrop, #intro::backdrop, #source-pick::backdrop { background: rgba(14, 27, 51, .4); backdrop-filter: blur(4px); }
-#about article, #intro article, #source-pick article { padding: 28px; overflow-y: auto; max-height: 85dvh; }
-#about h2, #intro h2, #source-pick h2 {
+#about::backdrop, #intro::backdrop, #source-pick::backdrop, #qr-dialog::backdrop { background: rgba(14, 27, 51, .4); backdrop-filter: blur(4px); }
+#about article, #intro article, #source-pick article, #qr-dialog article { padding: 28px; overflow-y: auto; max-height: 85dvh; }
+#about h2, #intro h2, #source-pick h2, #qr-dialog h2 {
   font-family: "Sora", sans-serif; font-weight: 600;
   letter-spacing: -0.02em;
   font-size: 1.35rem; margin-bottom: 14px;
 }
-#about p, #about ul, #intro p, #source-pick p { font-size: .9rem; line-height: 1.65; color: var(--text-dim); margin-bottom: 12px; }
+#about p, #about ul, #intro p, #source-pick p, #qr-dialog p { font-size: .9rem; line-height: 1.65; color: var(--text-dim); margin-bottom: 12px; }
 #about strong, #intro strong { color: var(--text); }
 
 /* first-visit source chooser */
@@ -687,4 +703,28 @@ body.vr { grid-template-columns: 1fr; }
 
   /* Live camera sits on the same line as compare / split; its Normal / VR
      options pop up into empty canvas above the single row */
+}
+
+/* ————— QR dialog ————— */
+
+#qr-dialog { max-width: 380px; }
+.qr-article { text-align: center; }
+#qr-box {
+  display: flex; justify-content: center;
+  background: #fff;
+  border: 1px solid var(--card-line);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 4px auto 14px;
+  width: fit-content;
+}
+#qr-box svg { display: block; width: 220px; height: 220px; }
+
+/* ————— About: "what can help" ————— */
+
+.about-sub {
+  font-family: "Sora", sans-serif; font-weight: 600;
+  letter-spacing: -0.01em;
+  font-size: 1.05rem;
+  margin: 18px 0 8px;
 }

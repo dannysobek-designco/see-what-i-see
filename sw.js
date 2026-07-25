@@ -9,7 +9,7 @@
 
    Bump CACHE on any release that changes precached assets. */
 
-const CACHE = "sws-v2";
+const CACHE = "sws-v3";
 const PRECACHE = [
   ".",
   "index.html",
@@ -17,6 +17,7 @@ const PRECACHE = [
   "js/app.js",
   "js/gl.js",
   "js/scenes.js",
+  "js/vendor/qrcode.js",
   "assets/sky.jpg",
   "assets/night.jpg",
   "assets/page.jpg",

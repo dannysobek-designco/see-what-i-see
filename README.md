@@ -8,7 +8,8 @@ diagnostic criteria (see [visualsnowinitiative.org](https://www.visualsnowinitia
 
 - **Visual snow** — animated static across the whole field (intensity, density,
   dot size, flicker speed, mono or colored)
-- **Palinopsia** — afterimages / trailing via a feedback buffer
+- **Palinopsia** — trailing via a feedback buffer, plus negative
+  afterimages from a slow retinal-adaptation buffer
 - **Enhanced entoptic phenomena** — floaters, blue-field darting dots,
   photopsia light flashes
 - **Photophobia** — glare bloom and washout veil
@@ -29,7 +30,12 @@ Extras:
   preset that remembers your custom settings between visits (localStorage)
 - Press-and-hold **compare** and a draggable **split view** (typical vision
   on one side, VSS on the other)
-- **Shareable links** — copy a URL that reproduces your exact settings
+- **Shareable links** — copy a URL that reproduces your exact settings,
+  show it as a **QR code** for in-person sharing, or export a **photo /
+  8-second clip** of the view straight to the share sheet
+- The "Eyes closed" scene drifts dim colored clouds (self-light of the eye)
+- An in-app "What can help" section (tinted lenses, triggers, finding a
+  knowledgeable clinician)
 - Opt-in **tinnitus** audio (a thin high-pitched tone), since most people
   with VSS also live with ringing ears; a mute toggle appears on screen only
   while the tone is active

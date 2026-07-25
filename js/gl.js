@@ -20,10 +20,11 @@ precision highp int;   /* ints default to mediump in ES fragment shaders —
                           16-bit on some mobile GPUs, which breaks the
                           integer hash (and with it, the snow) entirely */
 in vec2 vUv;
-out vec4 frag;
-uniform sampler2D uScene, uPrev;
+layout(location=0) out vec4 frag;       // trailed scene (feedback buffer A)
+layout(location=1) out vec4 fragAdapt;  // slow retinal adaptation (buffer B)
+uniform sampler2D uScene, uPrev, uAdapt;
 uniform vec2 uRes, uSceneSize;
-uniform float uGhost, uNyct, uTrail;
+uniform float uGhost, uNyct, uTrail, uNeg, uT;
 uniform float uZoom, uPan;   // slow Ken Burns pan for still images
 
 float luma(vec3 c){ return dot(c, vec3(0.299,0.587,0.114)); }
@@ -39,13 +40,29 @@ vec2 coverUv(vec2 uv){
 
 void main(){
   vec2 uv = coverUv(vUv);
-  vec3 col = texture(uScene, uv).rgb;
+  vec3 raw = texture(uScene, uv).rgb;
+  vec3 col = raw;
 
   // — double vision / ghosting: a displaced second copy of the scene —
   if(uGhost > 0.001){
     vec2 off = vec2(0.016, 0.010) * uGhost;
     col = mix(col, texture(uScene, uv + off).rgb, 0.38*min(uGhost*1.6, 1.0));
   }
+
+  // — negative afterimages: the retina adapts to what it has been staring
+  //   at; when the view moves on, an inverted, complementary-colored
+  //   imprint of the old bright areas lingers (screen-space, like a real
+  //   retinal afterimage — it stays put while the scene moves) —
+  vec3 adapt = texture(uAdapt, vUv).rgb;
+  if(uNeg > 0.001){
+    vec3 imprint = adapt - raw;                       // + where past was brighter
+    col -= uNeg * 0.65 * clamp(imprint, -0.08, 1.0);  // dark imprints, tiny positive
+    col = clamp(col, 0.0, 1.0);
+  }
+  // slow adaptation toward the current scene; dithered so 8-bit buffer
+  // steps don't stall and leave permanent ghosts
+  float dn = fract(sin(dot(vUv*uRes + uT*61.7, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+  fragAdapt = vec4(mix(adapt, raw, 0.03) + dn * (1.5/255.0), 1.0);
 
   // — nyctalopia: shadow detail collapses, darks desaturate —
   if(uNyct > 0.001){
@@ -83,6 +100,7 @@ uniform float uTime;
 uniform float uGlare, uHalo;
 uniform float uZoom, uPan;
 uniform float uClean;      // 1 = render the untouched scene (split compare)
+uniform float uSelfLight;  // closed-eye "self-light": drifting colored clouds
 uniform float uSnow, uSnowDensity, uSnowSize, uSnowSpeed, uSnowColor;
 uniform float uPulse, uFloaterAmt, uBfepAmt;
 uniform int uFloaterCount, uBfepCount;
@@ -125,6 +143,20 @@ void main(){
 
   vec3 col = texture(uTex, uv).rgb;
   if(uPulse > 0.001) col *= 1.0 + pulseWave*0.03*uPulse;
+
+  // — self-light of the eye: with eyes closed, slow dim clouds of color
+  //   drift across the dark (VSI: "colored waves or clouds when closing
+  //   the eyes in the dark") —
+  if(uSelfLight > 0.001){
+    vec2 q = uv * vec2(aspect, 1.0) * 2.4;
+    float n = sin(q.x*1.7 + uTime*0.11) + sin(q.y*2.3 - uTime*0.13)
+            + sin((q.x + q.y)*1.3 + uTime*0.07)
+            + sin(length(q - vec2(aspect*1.2, 1.1))*2.1 - uTime*0.09);
+    n *= 0.25;                                   // ≈ -1..1
+    float m = smoothstep(-0.45, 0.9, n);
+    vec3 tint = 0.5 + 0.5*cos(6.28318*(n*0.3 + uTime*0.008 + vec3(0.0, 0.33, 0.67)));
+    col += tint * m * uSelfLight * 0.14;
+  }
 
   // — glare & halos, computed from the blurred original scene —
   if(uGlare > 0.001 || uHalo > 0.001){
@@ -264,9 +296,9 @@ class VSSRenderer {
     this.progScene = this._program(VERT, SCENE_FRAG);
     this.progOverlay = this._program(VERT, OVERLAY_FRAG);
     this.uS = this._uniforms(this.progScene,
-      ["uScene","uPrev","uRes","uSceneSize","uGhost","uNyct","uTrail","uZoom","uPan"]);
+      ["uScene","uPrev","uAdapt","uRes","uSceneSize","uGhost","uNyct","uTrail","uNeg","uT","uZoom","uPan"]);
     this.uO = this._uniforms(this.progOverlay,
-      ["uTex","uScene","uView","uCanvas","uSceneSize","uCssH","uTime","uGlare","uHalo","uZoom","uPan","uClean",
+      ["uTex","uScene","uView","uCanvas","uSceneSize","uCssH","uTime","uGlare","uHalo","uZoom","uPan","uClean","uSelfLight",
        "uSnow","uSnowDensity","uSnowSize","uSnowSpeed","uSnowColor",
        "uPulse","uFloaterAmt","uBfepAmt","uFloaterCount","uBfepCount","uFloaters","uBfep","uFlash"]);
 
@@ -358,8 +390,7 @@ class VSSRenderer {
     this.width = w; this.height = h;
     this.canvas.width = w; this.canvas.height = h;
     const gl = this.gl;
-    for(let i=0;i<2;i++){
-      if(this.trail[i]){ gl.deleteTexture(this.trail[i].tex); gl.deleteFramebuffer(this.trail[i].fbo); }
+    const makeTex = () => {
       const tex = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -367,10 +398,22 @@ class VSSRenderer {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return tex;
+    };
+    for(let i=0;i<2;i++){
+      if(this.trail[i]){
+        gl.deleteTexture(this.trail[i].tex);
+        gl.deleteTexture(this.trail[i].adapt);
+        gl.deleteFramebuffer(this.trail[i].fbo);
+      }
+      const tex = makeTex();          // trailed scene
+      const adapt = makeTex();        // retinal adaptation (afterimages)
       const fbo = gl.createFramebuffer();
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-      this.trail[i] = { tex, fbo };
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, adapt, 0);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+      this.trail[i] = { tex, adapt, fbo };
     }
     this._clearTrail();
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -458,13 +501,18 @@ class VSSRenderer {
     gl.bindTexture(gl.TEXTURE_2D, this.srcTex);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, prev.tex);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, prev.adapt);
     gl.uniform1i(this.uS.uScene, 0);
     gl.uniform1i(this.uS.uPrev, 1);
+    gl.uniform1i(this.uS.uAdapt, 2);
     gl.uniform2f(this.uS.uRes, this.width, this.height);
     gl.uniform2f(this.uS.uSceneSize, this.source.w, this.source.h);
     gl.uniform1f(this.uS.uGhost, P.ghost);
     gl.uniform1f(this.uS.uNyct, P.night);
     gl.uniform1f(this.uS.uTrail, P.trail);
+    gl.uniform1f(this.uS.uNeg, P.negative);
+    gl.uniform1f(this.uS.uT, t);
     gl.uniform1f(this.uS.uZoom, zoom);
     gl.uniform1f(this.uS.uPan, pan);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -483,6 +531,7 @@ class VSSRenderer {
     gl.uniform1f(this.uO.uCssH, this.cssH || this.height);
     gl.uniform1f(this.uO.uGlare, P.glare);
     gl.uniform1f(this.uO.uHalo, P.halos);
+    gl.uniform1f(this.uO.uSelfLight, P.selfLight || 0);
     gl.uniform1f(this.uO.uZoom, zoom);
     gl.uniform1f(this.uO.uPan, pan);
     gl.uniform1f(this.uO.uTime, t);

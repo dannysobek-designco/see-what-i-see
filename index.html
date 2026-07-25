@@ -130,7 +130,12 @@
 
   <section class="panel-block" id="share-block">
     <button id="btn-share" class="wide-btn">Copy a link to <em>my</em> settings</button>
-    <p class="fine">Tune the sliders to match your experience, then share the link — whoever opens it sees exactly what you set.</p>
+    <div class="share-tools">
+      <button id="btn-photo" class="tool-btn">Save photo</button>
+      <button id="btn-clip" class="tool-btn">Record clip</button>
+      <button id="btn-qr" class="tool-btn">Show QR</button>
+    </div>
+    <p class="fine">Tune the sliders to match your experience, then share the link — whoever opens it sees exactly what you set. Or save a photo / 8-second clip of the view to post anywhere.</p>
   </section>
 
   <footer id="panel-footer">
@@ -202,6 +207,16 @@
   </div>
 </div>
 
+<!-- QR share dialog -->
+<dialog id="qr-dialog">
+  <article class="qr-article">
+    <h2>Scan to see my vision</h2>
+    <div id="qr-box" aria-label="QR code linking to these exact settings"></div>
+    <p class="fine">Point a phone camera at the code — it opens this simulator with these exact settings on their phone.</p>
+    <form method="dialog"><button class="wide-btn">Close</button></form>
+  </article>
+</dialog>
+
 <!-- About dialog -->
 <dialog id="about">
   <article>
@@ -215,6 +230,15 @@
       <li><strong>Nyctalopia</strong> — impaired night vision.</li>
     </ul>
     <p>Many people also experience halos and starbursts around lights, double vision, and pulsating or trembling vision — plus non-visual symptoms like tinnitus, brain fog, and sensory overload that no screen can show.</p>
+    <h3 class="about-sub">What can help</h3>
+    <p>There's no cure for VSS yet, but people commonly report these things make day-to-day life easier:</p>
+    <ul>
+      <li><strong>Tinted lenses</strong> — many find rose-tinted FL-41 glasses take the edge off the static, glare and light sensitivity, indoors and out.</li>
+      <li><strong>Managing triggers</strong> — fatigue, stress, caffeine and certain lighting can make symptoms louder for some people; noticing your own patterns helps.</li>
+      <li><strong>Screen comfort</strong> — dark mode, lower brightness, warmer color temperature and larger text can make reading less exhausting.</li>
+      <li><strong>A clinician who knows VSS</strong> — a neurologist or neuro-ophthalmologist familiar with the condition matters; the <a href="https://www.visualsnowinitiative.org" target="_blank" rel="noopener">Visual Snow Initiative</a> maintains a directory of physicians who understand it.</li>
+    </ul>
+    <p class="fine">None of this is medical advice — what helps varies person to person, so talk it through with your doctor.</p>
     <p class="fine">This simulator is an approximation for empathy and education — everyone's VSS is different, and it is not a diagnostic or medical tool. Learn more at the <a href="https://www.visualsnowinitiative.org" target="_blank" rel="noopener">Visual Snow Initiative</a>.</p>
     <p class="fine">Demo photos by <a href="https://unsplash.com/@soham1991" target="_blank" rel="noopener">Soham Banerjee</a>, <a href="https://unsplash.com/@handco" target="_blank" rel="noopener">H&amp;CO</a>, and <a href="https://unsplash.com/@brett_jordan" target="_blank" rel="noopener">Brett Jordan</a> on <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a>.</p>
     <form method="dialog"><button class="wide-btn">Close</button></form>
@@ -223,6 +247,7 @@
 
 <video id="camvideo" playsinline muted hidden></video>
 
+<script src="js/vendor/qrcode.js"></script>
 <script src="js/scenes.js"></script>
 <script src="js/gl.js"></script>
 <script src="js/app.js"></script>

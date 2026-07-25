@@ -6,10 +6,10 @@
 /* ————— symptom model ————— */
 
 const PARAM_KEYS = ["snow","snowDensity","snowSize","snowSpeed","snowColor",
-  "trail","floaters","bfep","flashes","glare","halos","night","ghost","pulse","tinnitus"];
+  "trail","floaters","bfep","flashes","glare","halos","night","ghost","pulse","tinnitus","negative"];
 
 // "amount" params get zeroed by Hold-to-compare; quality params (density/size/speed) don't
-const AMOUNT_KEYS = ["snow","trail","floaters","bfep","flashes","glare","halos","night","ghost","pulse","tinnitus"];
+const AMOUNT_KEYS = ["snow","trail","floaters","bfep","flashes","glare","halos","night","ghost","pulse","tinnitus","negative"];
 
 const GROUPS = [
   { title: "Visual snow", note: "the hallmark — dynamic, continuous dots across the entire field of vision",
@@ -21,7 +21,10 @@ const GROUPS = [
       { key:"snowColor", label:"Colored static", toggle:true },
     ]},
   { title: "Afterimages", note: "palinopsia — images linger and trail after the eyes move on",
-    ctls: [ { key:"trail", label:"Trailing & persistence" } ]},
+    ctls: [
+      { key:"trail", label:"Trailing & persistence" },
+      { key:"negative", label:"Negative afterimages" },
+    ]},
   { title: "Entoptic phenomena", note: "floaters, darting dots and flashes, all amplified",
     ctls: [
       { key:"floaters", label:"Floaters" },
@@ -48,10 +51,10 @@ const GROUPS = [
 
 // tinnitus stays 0 in every preset — audio is strictly opt-in
 const PRESETS = {
-  none:     { snow:0, snowDensity:.45, snowSize:.25, snowSpeed:.6, snowColor:0, trail:0, floaters:0, bfep:0, flashes:0, glare:0, halos:0, night:0, ghost:0, pulse:0, tinnitus:0 },
-  mild:     { snow:.16, snowDensity:.28, snowSize:.18, snowSpeed:.55, snowColor:0, trail:.06, floaters:.08, bfep:.07, flashes:.02, glare:.06, halos:.1, night:.06, ghost:0, pulse:.03, tinnitus:0 },
-  moderate: { snow:.34, snowDensity:.4, snowSize:.22, snowSpeed:.6, snowColor:0, trail:.16, floaters:.18, bfep:.16, flashes:.07, glare:.16, halos:.24, night:.16, ghost:.04, pulse:.08, tinnitus:0 },
-  severe:   { snow:.7, snowDensity:.55, snowSize:.28, snowSpeed:.7, snowColor:1, trail:.5, floaters:.5, bfep:.5, flashes:.3, glare:.45, halos:.6, night:.5, ghost:.2, pulse:.3, tinnitus:0 },
+  none:     { snow:0, snowDensity:.45, snowSize:.25, snowSpeed:.6, snowColor:0, trail:0, floaters:0, bfep:0, flashes:0, glare:0, halos:0, night:0, ghost:0, pulse:0, tinnitus:0, negative:0 },
+  mild:     { snow:.16, snowDensity:.28, snowSize:.18, snowSpeed:.55, snowColor:0, trail:.06, floaters:.08, bfep:.07, flashes:.02, glare:.06, halos:.1, night:.06, ghost:0, pulse:.03, tinnitus:0, negative:.06 },
+  moderate: { snow:.34, snowDensity:.4, snowSize:.22, snowSpeed:.6, snowColor:0, trail:.16, floaters:.18, bfep:.16, flashes:.07, glare:.16, halos:.24, night:.16, ghost:.04, pulse:.08, tinnitus:0, negative:.18 },
+  severe:   { snow:.7, snowDensity:.55, snowSize:.28, snowSpeed:.7, snowColor:1, trail:.5, floaters:.5, bfep:.5, flashes:.3, glare:.45, halos:.6, night:.5, ghost:.2, pulse:.3, tinnitus:0, negative:.4 },
 };
 
 const state = { ...PRESETS.moderate };
@@ -91,6 +94,7 @@ try {
 }
 
 let vrMode = false;
+let sceneName = "night";   // which source is showing (drives self-light)
 let compareMix = 0, compareHeld = false;   // 1 = symptoms hidden
 let camStream = null;
 
@@ -99,6 +103,7 @@ async function useScene(name){
     const el = await Scenes.get(name);
     stopCamera();
     renderer.setSource(el, el.naturalWidth || el.width, el.naturalHeight || el.height, false);
+    sceneName = name;
     return true;
   } catch (e) {
     toast(e.message, 4000);
@@ -136,6 +141,7 @@ async function useCamera(){
       else video.onloadedmetadata = res;
     });
     renderer.setSource(video, video.videoWidth, video.videoHeight, true);
+    sceneName = "camera";
     return true;
   } catch (e) {
     toast("Camera unavailable: " + (e.name === "NotAllowedError" ? "permission was denied." : e.message), 5000);
@@ -309,6 +315,7 @@ fileInput.addEventListener("change", () => {
   img.onload = () => {
     stopCamera();
     renderer.setSource(img, img.naturalWidth, img.naturalHeight, false);
+    sceneName = "upload";
     document.querySelectorAll("#scene-chips .chip").forEach(c => c.classList.remove("active"));
     document.querySelector('[data-scene="upload"]').classList.add("active");
     URL.revokeObjectURL(img.src);
@@ -457,14 +464,104 @@ document.addEventListener("fullscreenchange", () => {
 
 /* ————— share link ————— */
 
-document.getElementById("btn-share").addEventListener("click", async () => {
+function shareUrl(){
   const vals = PARAM_KEYS.map(k => Math.round(state[k]*100)).join(".");
-  const url = location.origin + location.pathname + "#v1=" + vals;
+  return location.origin + location.pathname + "#v1=" + vals;
+}
+
+document.getElementById("btn-share").addEventListener("click", async () => {
+  const url = shareUrl();
   try {
     await navigator.clipboard.writeText(url);
     toast("Link copied — anyone who opens it sees your exact settings.");
   } catch {
     prompt("Copy this link:", url);
+  }
+});
+
+/* ————— export: photo & short clip of the simulation ————— */
+
+let photoPending = false;
+
+// hand a captured file to the OS share sheet when possible (best on
+// phones), otherwise download it
+async function deliverFile(blob, name, type){
+  const file = new File([blob], name, { type });
+  if(navigator.canShare && navigator.canShare({ files: [file] })){
+    try {
+      await navigator.share({ files: [file], title: "See What I See" });
+      return;
+    } catch (e) {
+      if(e.name === "AbortError") return;   // user closed the sheet
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+document.getElementById("btn-photo").addEventListener("click", () => {
+  photoPending = true;   // consumed in the frame loop, right after a draw
+});
+
+const btnClip = document.getElementById("btn-clip");
+const CLIP_SECONDS = 8;
+let recorder = null, clipTimer = null;
+
+function stopClip(){
+  if(recorder && recorder.state !== "inactive") recorder.stop();
+}
+
+btnClip.addEventListener("click", () => {
+  if(recorder){ stopClip(); return; }   // tap again to finish early
+  let stream;
+  try { stream = canvas.captureStream(30); } catch { toast("Recording isn't supported on this device."); return; }
+  // prefer H.264 mp4 (plays everywhere, incl. iPhones receiving the file),
+  // then generic mp4, then webm
+  const mime = ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4",
+                "video/webm;codecs=vp9", "video/webm"]
+    .find(m => MediaRecorder.isTypeSupported(m)) || "";
+  const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  const chunks = [];
+  rec.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    clearInterval(clipTimer); clipTimer = null;
+    recorder = null;
+    btnClip.textContent = "Record clip";
+    stream.getTracks().forEach(tr => tr.stop());
+    const outType = rec.mimeType || "video/webm";
+    const ext = outType.includes("mp4") ? "mp4" : "webm";
+    deliverFile(new Blob(chunks, { type: outType }), "see-what-i-see." + ext, outType);
+  };
+  rec.start(250);
+  recorder = rec;
+  let left = CLIP_SECONDS;
+  btnClip.textContent = `Recording… ${left}`;
+  clipTimer = setInterval(() => {
+    if(--left <= 0){ stopClip(); return; }
+    btnClip.textContent = `Recording… ${left}`;
+  }, 1000);
+});
+
+// hide the clip button where recording isn't supported
+if(!("MediaRecorder" in window) || !canvas.captureStream){
+  btnClip.hidden = true;
+}
+
+/* ————— QR code for in-person sharing ————— */
+
+const qrDialog = document.getElementById("qr-dialog");
+document.getElementById("btn-qr").addEventListener("click", () => {
+  try {
+    const qr = qrcode(0, "M");
+    qr.addData(shareUrl());
+    qr.make();
+    document.getElementById("qr-box").innerHTML = qr.createSvgTag(6, 8);
+    qrDialog.showModal();
+  } catch {
+    toast("Couldn't build the QR code for this link.");
   }
 });
 
@@ -571,8 +668,22 @@ function frame(now){
   const P = { ...state };
   if(compareMix > 0.002) for(const k of AMOUNT_KEYS) P[k] *= (1 - compareMix);
 
+  // self-light of the eye only makes sense on the "Eyes closed" scene;
+  // it's a symptom, so Hold-to-compare fades it out too
+  P.selfLight = (sceneName === "eyes" ? 1 : 0) * (1 - compareMix);
+
   updateTinnitus(P.tinnitus);
   renderer.render(t, P, vrMode, (splitOn && !vrMode) ? splitPos : null);
+
+  // photo export must read the drawing buffer in the same task as the draw
+  if(photoPending){
+    photoPending = false;
+    canvas.toBlob(b => {
+      if(b) deliverFile(b, "see-what-i-see.jpg", "image/jpeg");
+      else toast("Couldn't capture the image on this device.");
+    }, "image/jpeg", 0.92);
+  }
+
   requestAnimationFrame(frame);
 }
 
