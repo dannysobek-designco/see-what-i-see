@@ -490,6 +490,21 @@ body {
   margin-bottom: 16px;
   box-shadow: 0 6px 18px rgba(18, 149, 205, .35);
 }
+#intro .intro-shared {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--accent-soft);
+  border: 1px solid rgba(47, 107, 255, .25);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: .85rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+#intro .intro-shared[hidden] { display: none; }
+.intro-shared svg { flex: none; margin-top: 3px; color: var(--accent-strong); }
+.intro-shared strong { color: var(--accent-strong); }
+
 .intro-steps {
   list-style: none;
   counter-reset: step;

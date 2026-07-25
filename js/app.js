@@ -6,10 +6,10 @@
 /* ————— symptom model ————— */
 
 const PARAM_KEYS = ["snow","snowDensity","snowSize","snowSpeed","snowColor",
-  "trail","floaters","bfep","flashes","glare","halos","night","ghost","pulse","tinnitus","rainbow"];
+  "trail","floaters","bfep","flashes","glare","halos","night","ghost","pulse","tinnitus"];
 
 // "amount" params get zeroed by Hold-to-compare; quality params (density/size/speed) don't
-const AMOUNT_KEYS = ["snow","trail","floaters","bfep","flashes","glare","halos","night","ghost","pulse","tinnitus","rainbow"];
+const AMOUNT_KEYS = ["snow","trail","floaters","bfep","flashes","glare","halos","night","ghost","pulse","tinnitus"];
 
 const GROUPS = [
   { title: "Visual snow", note: "the hallmark — dynamic, continuous dots across the entire field of vision",
@@ -32,7 +32,6 @@ const GROUPS = [
     ctls: [
       { key:"glare", label:"Glare & washout" },
       { key:"halos", label:"Halos & starbursts" },
-      { key:"rainbow", label:"Rainbow halos" },
     ]},
   { title: "Night vision", note: "nyctalopia — the dark holds less detail than it should",
     ctls: [ { key:"night", label:"Impaired night vision" } ]},
@@ -49,10 +48,10 @@ const GROUPS = [
 
 // tinnitus stays 0 in every preset — audio is strictly opt-in
 const PRESETS = {
-  none:     { snow:0, snowDensity:.45, snowSize:.25, snowSpeed:.6, snowColor:0, trail:0, floaters:0, bfep:0, flashes:0, glare:0, halos:0, night:0, ghost:0, pulse:0, tinnitus:0, rainbow:0 },
-  mild:     { snow:.16, snowDensity:.28, snowSize:.18, snowSpeed:.55, snowColor:0, trail:.06, floaters:.08, bfep:.07, flashes:.02, glare:.06, halos:.1, night:.06, ghost:0, pulse:.03, tinnitus:0, rainbow:0 },
-  moderate: { snow:.34, snowDensity:.4, snowSize:.22, snowSpeed:.6, snowColor:0, trail:.16, floaters:.18, bfep:.16, flashes:.07, glare:.16, halos:.24, night:.16, ghost:.04, pulse:.08, tinnitus:0, rainbow:.12 },
-  severe:   { snow:.7, snowDensity:.55, snowSize:.28, snowSpeed:.7, snowColor:1, trail:.5, floaters:.5, bfep:.5, flashes:.3, glare:.45, halos:.6, night:.5, ghost:.2, pulse:.3, tinnitus:0, rainbow:.3 },
+  none:     { snow:0, snowDensity:.45, snowSize:.25, snowSpeed:.6, snowColor:0, trail:0, floaters:0, bfep:0, flashes:0, glare:0, halos:0, night:0, ghost:0, pulse:0, tinnitus:0 },
+  mild:     { snow:.16, snowDensity:.28, snowSize:.18, snowSpeed:.55, snowColor:0, trail:.06, floaters:.08, bfep:.07, flashes:.02, glare:.06, halos:.1, night:.06, ghost:0, pulse:.03, tinnitus:0 },
+  moderate: { snow:.34, snowDensity:.4, snowSize:.22, snowSpeed:.6, snowColor:0, trail:.16, floaters:.18, bfep:.16, flashes:.07, glare:.16, halos:.24, night:.16, ghost:.04, pulse:.08, tinnitus:0 },
+  severe:   { snow:.7, snowDensity:.55, snowSize:.28, snowSpeed:.7, snowColor:1, trail:.5, floaters:.5, bfep:.5, flashes:.3, glare:.45, halos:.6, night:.5, ghost:.2, pulse:.3, tinnitus:0 },
 };
 
 const state = { ...PRESETS.moderate };
@@ -475,7 +474,7 @@ function loadFromHash(){
   const vals = m[1].split(".").map(Number);
   // links from before newer params were added carry fewer values; accept
   // them and leave the missing (newer) params at 0
-  if(vals.length < 14 || vals.length > PARAM_KEYS.length || vals.some(isNaN)) return false;
+  if(vals.length < 14 || vals.some(isNaN)) return false;   // extras (removed params) are ignored
   PARAM_KEYS.forEach((k, i) => state[k] = i < vals.length ? Math.min(Math.max(vals[i]/100, 0), 1) : 0);
   clearPresetActive();   // a shared link is someone else's vision — don't save it as "My VSS"
   return true;
@@ -580,7 +579,8 @@ function frame(now){
 /* ————— go ————— */
 
 // settings priority: shared link > my saved settings > moderate default
-if(loadFromHash()){
+const openedSharedLink = loadFromHash();
+if(openedSharedLink){
   refreshUI();
 } else {
   const mine = loadMine();
@@ -731,8 +731,15 @@ const intro = document.getElementById("intro");
 const markSeen = () => {
   try { localStorage.setItem(LS_INTRO, "1"); } catch {}
 };
+// opening someone's shared link deserves context: first-timers get a callout
+// in the intro (and the tour as usual); returning visitors get a toast
+if(openedSharedLink){
+  document.getElementById("intro-shared").hidden = false;
+}
 if(!localStorage.getItem(LS_INTRO)){
   intro.showModal();
+} else if(openedSharedLink){
+  setTimeout(() => toast("These settings were shared with you — tuned to match the sender's own vision.", 6000), 600);
 }
 document.getElementById("intro-tour").addEventListener("click", () => {
   markSeen();
