@@ -119,7 +119,10 @@ function stopCamera(){
   }
 }
 
+let cameraStarting = false;
+
 async function useCamera(){
+  if(cameraStarting) return false;   // a start is already in flight; ignore taps
   if(!window.isSecureContext){
     toast("Camera needs a secure (https) connection. Deploy the app or open it on localhost.", 5000);
     return false;
@@ -128,24 +131,37 @@ async function useCamera(){
     toast("This browser can't access the camera.", 4000);
     return false;
   }
+  cameraStarting = true;
   try {
+    stopCamera();                    // cleanly detach any previous stream first
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
     camStream = stream;
     video.srcObject = stream;
-    await video.play();
-    await new Promise(res => {
-      if(video.videoWidth) res();
-      else video.onloadedmetadata = res;
+    // wait for dimensions via metadata (with a timeout), and do NOT await
+    // play(): on some Androids that promise hangs, and a muted playsinline
+    // stream starts on its own once metadata is in. Its rejection (e.g.
+    // "interrupted by a new load request") is harmless noise.
+    await new Promise((res, rej) => {
+      if(video.videoWidth) return res();
+      video.onloadedmetadata = () => res();
+      setTimeout(() => rej(new Error("the camera took too long to start.")), 8000);
     });
+    const p = video.play();
+    if(p && p.catch) p.catch(() => {});
     renderer.setSource(video, video.videoWidth, video.videoHeight, true);
     sceneName = "camera";
     return true;
   } catch (e) {
-    toast("Camera unavailable: " + (e.name === "NotAllowedError" ? "permission was denied." : e.message), 5000);
+    stopCamera();                    // release the camera if we got partway
+    if(e.name !== "AbortError"){     // superseded starts aren't user-facing errors
+      toast("Camera unavailable: " + (e.name === "NotAllowedError" ? "permission was denied." : e.message), 5000);
+    }
     return false;
+  } finally {
+    cameraStarting = false;
   }
 }
 
@@ -855,6 +871,12 @@ if(openedSharedLink){
 }
 if(!localStorage.getItem(LS_INTRO) || openedSharedLink){
   intro.showModal();
+  // start at the top: showModal() focuses inside the dialog, and Safari
+  // scrolls whatever it focused into view (which used to be the bottom
+  // button). The article carries autofocus now, but reset scroll anyway.
+  const art = intro.querySelector("article");
+  art.scrollTop = 0;
+  requestAnimationFrame(() => { art.scrollTop = 0; });
 }
 let introChoseTour = false;
 document.getElementById("intro-tour").addEventListener("click", () => {
