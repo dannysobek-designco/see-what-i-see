@@ -747,10 +747,15 @@ function endTour(){
 }
 
 // on a first mobile visit, once onboarding wraps up, ask how they want to
-// see it: over their live camera, or with a sample scene
+// see it: over their live camera, or with a sample scene. Shared links get
+// it every time (once per session) — each one is a fresh "look through my
+// eyes" moment, even for someone who has used the app before.
 const sourcePick = document.getElementById("source-pick");
+let sourceShownThisSession = false;
 function maybeShowSourceChooser(){
-  if(!isMobile() || localStorage.getItem(LS_SOURCE)) return;
+  if(!isMobile() || sourceShownThisSession) return;
+  if(!openedSharedLink && localStorage.getItem(LS_SOURCE)) return;
+  sourceShownThisSession = true;
   try { localStorage.setItem(LS_SOURCE, "1"); } catch {}
   setTimeout(() => sourcePick.showModal(), 250);   // after any overlay closes
 }
@@ -842,17 +847,18 @@ const intro = document.getElementById("intro");
 const markSeen = () => {
   try { localStorage.setItem(LS_INTRO, "1"); } catch {}
 };
-// opening someone's shared link deserves context: first-timers get a callout
-// in the intro (and the tour as usual); returning visitors get a toast
+// opening someone's shared link deserves the full context every time, even
+// for returning visitors: the intro (with the "shared their vision"
+// callout), the tour offer, and then the camera chooser on mobile
 if(openedSharedLink){
   document.getElementById("intro-shared").hidden = false;
 }
-if(!localStorage.getItem(LS_INTRO)){
+if(!localStorage.getItem(LS_INTRO) || openedSharedLink){
   intro.showModal();
-} else if(openedSharedLink){
-  setTimeout(() => toast("These settings were shared with you — tuned to match the sender's own vision.", 6000), 600);
 }
+let introChoseTour = false;
 document.getElementById("intro-tour").addEventListener("click", () => {
+  introChoseTour = true;
   markSeen();
   intro.close();
   setTimeout(startTour, 250);   // let the dialog finish closing first
@@ -861,9 +867,15 @@ document.getElementById("intro-skip").addEventListener("click", () => {
   markSeen();
   try { localStorage.setItem(LS_TOUR, "1"); } catch {}
   intro.close();
-  maybeShowSourceChooser();   // still offer the source choice on first visit
+  maybeShowSourceChooser();   // direct call too: some browsers miss 'close'
 });
-intro.addEventListener("close", markSeen);   // Escape / backdrop
+// every dismissal path (skip button, Escape, backdrop) leads to the source
+// chooser — except "Show me around", where it comes after the tour instead
+intro.addEventListener("close", () => {
+  markSeen();
+  if(!introChoseTour) maybeShowSourceChooser();
+  introChoseTour = false;
+});
 
 // offline/PWA support on the deployed site; skipped in local dev so
 // the service worker never serves stale files while iterating
