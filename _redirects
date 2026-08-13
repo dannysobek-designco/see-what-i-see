@@ -1,0 +1,5 @@
+# Old netlify.app links (shared before the custom domain existed) forward
+# permanently to the primary domain. Browsers carry the #v1=… settings
+# fragment across the redirect, so shared vision links keep working.
+https://vssimulator.netlify.app/* https://vssimulator.com/:splat 301!
+http://vssimulator.netlify.app/*  https://vssimulator.com/:splat 301!
